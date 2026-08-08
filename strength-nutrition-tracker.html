@@ -325,21 +325,21 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
     </div>
     <div class="note">Weigh in once or twice a week, same time of day. Daily fluctuations of 1–3 lb are normal water shifts — the trend line is what counts.</div>
     <div id="wtStats"></div>
-    <canvas id="chartWeight" height="220"></canvas>
+    <canvas id="chartWeight" height="220" data-mobile-height="150"></canvas>
     <div id="wtList"></div>
   </div>
   <div class="card">
     <h2>Daily Protein — Last 14 Days</h2>
-    <canvas id="chartProtein" height="200"></canvas>
+    <canvas id="chartProtein" height="200" data-mobile-height="140"></canvas>
   </div>
   <div class="card">
     <h2>Calories In vs. Burned — Last 14 Days</h2>
     <p style="font-size:.85rem;color:var(--muted)">"Burned" here shows exercise calories you logged. Your body also burns your baseline (TDEE) every day — see Calculators.</p>
-    <canvas id="chartCals" height="200"></canvas>
+    <canvas id="chartCals" height="200" data-mobile-height="140"></canvas>
   </div>
   <div class="card">
     <h2>Workouts Completed Per Week</h2>
-    <canvas id="chartWorkouts" height="200"></canvas>
+    <canvas id="chartWorkouts" height="200" data-mobile-height="140"></canvas>
   </div>
   <div class="card">
     <h2>Plan Sessions Completed — Last 30 Days</h2>
@@ -1343,7 +1343,8 @@ function renderProgress(){
 function setupCanvas(id){
   const c = document.getElementById(id);
   const cssW = c.clientWidth || 800;
-  const cssH = parseInt(c.getAttribute("height"))||200;
+  const mobileH = parseInt(c.getAttribute("data-mobile-height"));
+  const cssH = (window.innerWidth<=480 && mobileH) ? mobileH : (parseInt(c.getAttribute("height"))||200);
   const r = window.devicePixelRatio||1;
   c.width = cssW*r; c.height = cssH*r; c.style.height = cssH+"px";
   const ctx = c.getContext("2d");
