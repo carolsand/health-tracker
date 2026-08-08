@@ -92,6 +92,12 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 .rlist .rrow .rinfo{flex:1;min-width:0}
 .rlist .rrow .rinfo details{font-size:.82rem;color:var(--muted);margin-top:4px}
 .rlist .rrow .btn{flex:none;padding:7px 12px;font-size:.85rem;margin-top:0}
+.toast-container{position:fixed;bottom:20px;left:0;right:0;z-index:9999;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 16px;pointer-events:none}
+.toast{pointer-events:auto;max-width:420px;width:100%;background:var(--ink);color:#fff;padding:12px 16px;border-radius:10px;font-size:.9rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;transform:translateY(12px);transition:opacity .25s,transform .25s;text-align:center}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:var(--good)}
+.toast.error{background:var(--warn)}
+.toast.info{background:var(--accent-dark)}
 #scanVideo{max-width:340px;border-radius:12px;overflow:hidden;margin-top:8px}
 .rcard img.photo{width:100%;height:120px;object-fit:cover}
 .docq{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--card)}
@@ -122,6 +128,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 </style>
 </head>
 <body>
+<div id="toastContainer" class="toast-container"></div>
 <div id="loginScreen" class="login-screen" style="display:none">
   <div class="login-card">
     <h1>Activity + Nutrition Tracker</h1>
@@ -597,6 +604,18 @@ document.getElementById("signupForm").addEventListener("submit", async (e)=>{
 function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function fmtDate(s){ const [y,m,d]=s.split("-"); return m+"/"+d+"/"+y.slice(2); }
 function esc(t){ return String(t).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function showToast(message, type){
+  const container = document.getElementById("toastContainer");
+  const el = document.createElement("div");
+  el.className = "toast " + (type || "info");
+  el.textContent = message;
+  container.appendChild(el);
+  requestAnimationFrame(()=> el.classList.add("show"));
+  setTimeout(()=>{
+    el.classList.remove("show");
+    setTimeout(()=> el.remove(), 300);
+  }, 3200);
+}
 
 /* ---------- Backup / restore ---------- */
 function exportData(){
@@ -609,7 +628,7 @@ function exportData(){
 function importData(ev){
   const f = ev.target.files[0]; if(!f) return;
   const r = new FileReader();
-  r.onload = () => { try { S = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), JSON.parse(r.result)); save(); renderAll(); alert("Backup restored!"); } catch(e){ alert("Sorry, that file could not be read."); } };
+  r.onload = () => { try { S = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), JSON.parse(r.result)); save(); renderAll(); showToast("Backup restored!", "success"); } catch(e){ showToast("Sorry, that file could not be read.", "error"); } };
   r.readAsText(f);
 }
 
@@ -753,7 +772,7 @@ function finishSetup(){
   const w = parseFloat(document.getElementById("setupWeight").value);
   const h = parseFloat(document.getElementById("setupHeight").value);
   const a = parseInt(document.getElementById("setupAge").value);
-  if (!h || !a){ alert("Please enter your height and age."); return; }
+  if (!h || !a){ showToast("Please enter your height and age.", "info"); return; }
   S.profile.startDate = sd;
   S.profile.heightIn = h;
   S.profile.age = a;
@@ -908,7 +927,7 @@ let sessionExercises = [];
 function addExerciseToSession(){
   const sel = document.getElementById("workoutExerciseSelect");
   const name = sel.value === "__other__" ? document.getElementById("customExerciseName").value.trim() : sel.value;
-  if (!name){ alert("Please choose or enter an exercise."); return; }
+  if (!name){ showToast("Please choose or enter an exercise.", "info"); return; }
   const sets = parseInt(document.getElementById("workoutSets").value)||0;
   const reps = parseInt(document.getElementById("workoutReps").value)||0;
   const weight = parseFloat(document.getElementById("workoutWeight").value)||0;
@@ -930,7 +949,7 @@ function renderSessionPreview(){
     '</tbody></table>' : '<p style="color:var(--muted);font-size:.85rem;margin-top:8px">No exercises added yet.</p>';
 }
 function saveWorkoutSession(){
-  if (!sessionExercises.length){ alert("Add at least one exercise first."); return; }
+  if (!sessionExercises.length){ showToast("Add at least one exercise first.", "info"); return; }
   const date = document.getElementById("workoutDate").value || todayStr();
   const name = document.getElementById("workoutSessionName").value.trim() || "Custom workout";
   S.customWorkouts.push({ id: Date.now(), date, name, exercises: sessionExercises });
@@ -979,7 +998,7 @@ function addMeal(name, p, c){
   const n = name || document.getElementById("mealName").value.trim();
   const prot = p!=null ? p : parseFloat(document.getElementById("mealProtein").value)||0;
   const cal = c!=null ? c : parseFloat(document.getElementById("mealCals").value)||0;
-  if (!n) { alert("Please enter what you ate."); return; }
+  if (!n) { showToast("Please enter what you ate.", "info"); return; }
   S.meals.push({ id: Date.now()+Math.floor(Math.random()*1000), date:d, name:n, protein:prot, cals:cal });
   save();
   if (!name){ document.getElementById("mealName").value=""; document.getElementById("mealProtein").value=""; document.getElementById("mealCals").value=""; }
@@ -1143,7 +1162,7 @@ function delPantry(i){ S.pantry.splice(i,1); save(); renderRecipes(); }
 function logRecipe(i){
   const r = RECIPES[i];
   addMeal(r.n, r.p, r.c);
-  alert('Added "'+r.n+'" to today\'s meal log — '+r.p+' g protein, ~'+r.c+' cal.');
+  showToast('Added "'+r.n+'" to today\'s meal log — '+r.p+' g protein, ~'+r.c+' cal.', "success");
 }
 async function findOnlineIdeas(){
   const out = document.getElementById("onlineIdeas");
@@ -1172,7 +1191,7 @@ async function findOnlineIdeas(){
 function calcEnergy(){
   const age = parseFloat(document.getElementById("cAge").value);
   const hIn = parseFloat(document.getElementById("cHeight").value);
-  if (!age || !hIn){ alert("Please enter your age and height."); return; }
+  if (!age || !hIn){ showToast("Please enter your age and height.", "info"); return; }
   const lbs = parseFloat(document.getElementById("cWeight").value)||latestWeight();
   const act = parseFloat(document.getElementById("cActivity").value)||1.375;
   S.profile.age = age; S.profile.heightIn = hIn; S.profile.activity = act;
@@ -1221,7 +1240,7 @@ function delAct(id){ S.activities = S.activities.filter(a=>a.id!==id); save(); r
 function addWeight(){
   const d = document.getElementById("wtDate").value || todayStr();
   const v = parseFloat(document.getElementById("wtVal").value);
-  if (!v){ alert("Please enter a weight."); return; }
+  if (!v){ showToast("Please enter a weight.", "info"); return; }
   S.weights = S.weights.filter(w=>w.date!==d);
   S.weights.push({date:d, lbs:v});
   S.weights.sort((a,b)=>a.date<b.date?-1:1);
