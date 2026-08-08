@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Carol's Strength + Nutrition Tracker</title>
+<title>Activity + Nutrition Tracker</title>
 <style>
 :root{
   --accent:#4f46e5; --accent-dark:#3730a3; --accent-light:#eef0fd;
@@ -111,7 +111,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <body>
 <div id="loginScreen" class="login-screen" style="display:none">
   <div class="login-card">
-    <h1>Carol's Strength + Nutrition Tracker</h1>
+    <h1>Activity + Nutrition Tracker</h1>
     <p class="sub" id="authSub">Sign in to view your data.</p>
     <form id="loginForm">
       <label>Username<input type="text" id="loginUsername" autocomplete="username" required></label>
@@ -135,7 +135,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 
 <div id="appRoot">
 <header>
-  <h1>Carol's Strength + Nutrition Tracker</h1>
+  <h1 id="appTitle">Activity + Nutrition Tracker</h1>
   <div class="hdr-btns">
     <button onclick="exportData()">⬇ Backup</button>
     <button onclick="document.getElementById('importFile').click()">⬆ Restore</button>
@@ -387,13 +387,13 @@ async function refreshFromServer(){
     S = await r.json();
     cacheLocally();
     renderAll();
-    checkAdminStatus();
+    loadSessionInfo();
   } catch(e){ /* offline — keep using the locally cached state already on screen */ }
 }
 
-/* ---------- Admin ---------- */
+/* ---------- Session info (username, admin status) ---------- */
 let isAdmin = false;
-async function checkAdminStatus(){
+async function loadSessionInfo(){
   try {
     const r = await fetch("/api/me");
     if (!r.ok) return;
@@ -401,7 +401,12 @@ async function checkAdminStatus(){
     isAdmin = !!data.isAdmin;
     document.getElementById("navAdminBtn").style.display = isAdmin ? "" : "none";
     if (isAdmin) renderAdmin();
-  } catch(e){ /* offline — leave admin tab as-is */ }
+    if (data.username){
+      const title = data.username + "’s Activity + Nutrition Tracker";
+      document.getElementById("appTitle").textContent = title;
+      document.title = title;
+    }
+  } catch(e){ /* offline — leave title/admin tab as-is */ }
 }
 async function renderAdmin(){
   const wrap = document.getElementById("adminUsers");

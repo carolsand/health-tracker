@@ -41,6 +41,7 @@ router.post("/signup", (req, res) => {
   const hash = bcrypt.hashSync(password, 12);
   const info = db.prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)").run(username, hash);
   req.session.userId = info.lastInsertRowid;
+  req.session.username = username;
   req.session.isAdmin = false; // signups are never admin
   res.json({ ok: true });
 });
@@ -55,6 +56,7 @@ router.post("/login", (req, res) => {
     return res.status(401).json({ error: "invalid credentials" });
   }
   req.session.userId = user.id;
+  req.session.username = user.username;
   req.session.isAdmin = !!user.is_admin;
   res.json({ ok: true });
 });
@@ -67,7 +69,11 @@ router.post("/logout", (req, res) => {
 });
 
 router.get("/me", requireAuth, (req, res) => {
-  res.json({ loggedIn: true, isAdmin: !!req.session.isAdmin });
+  // Look up fresh from the DB rather than trusting req.session.username, so
+  // sessions created before this field existed still resolve correctly.
+  const user = db.prepare("SELECT username, is_admin FROM users WHERE id = ?").get(req.session.userId);
+  if (!user) return res.status(401).json({ error: "not authenticated" });
+  res.json({ loggedIn: true, username: user.username, isAdmin: !!user.is_admin });
 });
 
 module.exports = { router, requireAuth, requireAdmin };
