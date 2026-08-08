@@ -10,6 +10,11 @@ function requireAuth(req, res, next) {
   res.status(401).json({ error: "not authenticated" });
 }
 
+function requireAdmin(req, res, next) {
+  if (req.session && req.session.userId && req.session.isAdmin) return next();
+  res.status(403).json({ error: "admin access required" });
+}
+
 function safeEqual(a, b) {
   const bufA = Buffer.from(String(a));
   const bufB = Buffer.from(String(b));
@@ -36,6 +41,7 @@ router.post("/signup", (req, res) => {
   const hash = bcrypt.hashSync(password, 12);
   const info = db.prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)").run(username, hash);
   req.session.userId = info.lastInsertRowid;
+  req.session.isAdmin = false; // signups are never admin
   res.json({ ok: true });
 });
 
@@ -49,6 +55,7 @@ router.post("/login", (req, res) => {
     return res.status(401).json({ error: "invalid credentials" });
   }
   req.session.userId = user.id;
+  req.session.isAdmin = !!user.is_admin;
   res.json({ ok: true });
 });
 
@@ -60,7 +67,7 @@ router.post("/logout", (req, res) => {
 });
 
 router.get("/me", requireAuth, (req, res) => {
-  res.json({ loggedIn: true });
+  res.json({ loggedIn: true, isAdmin: !!req.session.isAdmin });
 });
 
-module.exports = { router, requireAuth };
+module.exports = { router, requireAuth, requireAdmin };

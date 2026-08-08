@@ -6,6 +6,7 @@ const FileStore = require("session-file-store")(session);
 
 const { router: authRouter } = require("./auth");
 const stateRouter = require("./state");
+const adminRouter = require("./admin");
 
 const PORT = process.env.PORT || 8317;
 const IS_PROD = process.env.NODE_ENV === "production";
@@ -34,6 +35,7 @@ app.get("/", (req, res) => res.sendFile(APP_HTML));
 
 app.use("/api", authRouter);
 app.use("/api", stateRouter);
+app.use("/api", adminRouter);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`health-tracker server listening on 0.0.0.0:${PORT}`);

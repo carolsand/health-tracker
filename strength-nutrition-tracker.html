@@ -153,6 +153,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
   <button data-tab="calc">Calculators</button>
   <button data-tab="progress">Progress</button>
   <button data-tab="doctor">Doctor Visit</button>
+  <button data-tab="admin" id="navAdminBtn" style="display:none">Admin</button>
 </nav>
 
 <main>
@@ -326,6 +327,15 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
     </div>
   </div>
 </section>
+
+<!-- ============ ADMIN ============ -->
+<section class="tab" id="tab-admin">
+  <div class="card">
+    <h2>Manage Users</h2>
+    <p style="font-size:.9rem;color:var(--muted)">Reset a user's password if they've forgotten it. New passwords take effect immediately.</p>
+    <div id="adminUsers"></div>
+  </div>
+</section>
 </main>
 
 <footer>
@@ -377,8 +387,65 @@ async function refreshFromServer(){
     S = await r.json();
     cacheLocally();
     renderAll();
+    checkAdminStatus();
   } catch(e){ /* offline — keep using the locally cached state already on screen */ }
 }
+
+/* ---------- Admin ---------- */
+let isAdmin = false;
+async function checkAdminStatus(){
+  try {
+    const r = await fetch("/api/me");
+    if (!r.ok) return;
+    const data = await r.json();
+    isAdmin = !!data.isAdmin;
+    document.getElementById("navAdminBtn").style.display = isAdmin ? "" : "none";
+    if (isAdmin) renderAdmin();
+  } catch(e){ /* offline — leave admin tab as-is */ }
+}
+async function renderAdmin(){
+  const wrap = document.getElementById("adminUsers");
+  wrap.innerHTML = '<p style="color:var(--muted);font-size:.9rem">Loading users…</p>';
+  try {
+    const r = await fetch("/api/admin/users");
+    if (!r.ok){ wrap.innerHTML = '<div class="warnnote">Could not load users.</div>'; return; }
+    const users = await r.json();
+    wrap.innerHTML = users.map(u => (
+      '<div class="docq"><div class="q">' + esc(u.username) + (u.is_admin ? ' <span class="badge">admin</span>' : '') + '</div>' +
+      '<p style="font-size:.85rem;color:var(--muted);margin-bottom:8px">Joined ' + fmtDate(u.created_at.slice(0,10)) + '</p>' +
+      '<div class="flexrow">' +
+        '<div><label>New password</label><input type="password" placeholder="8+ characters" id="resetPw-' + u.id + '"></div>' +
+        '<div><button class="btn secondary" onclick="resetUserPassword(' + u.id + ')">Reset password</button></div>' +
+      '</div>' +
+      '<p id="resetMsg-' + u.id + '" style="font-size:.85rem;margin-top:6px;display:none"></p></div>'
+    )).join("");
+  } catch(e){
+    wrap.innerHTML = '<div class="warnnote">Could not reach the server.</div>';
+  }
+}
+async function resetUserPassword(id){
+  const input = document.getElementById("resetPw-"+id);
+  const msg = document.getElementById("resetMsg-"+id);
+  const newPassword = input.value;
+  msg.style.display = "block";
+  if (!newPassword || newPassword.length < 8){
+    msg.textContent = "Password must be at least 8 characters.";
+    msg.style.color = "var(--warn)";
+    return;
+  }
+  try {
+    const r = await fetch("/api/admin/users/"+id+"/reset-password", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({newPassword}) });
+    const data = await r.json().catch(()=>({}));
+    if (!r.ok){ msg.textContent = data.error || "Could not reset password."; msg.style.color = "var(--warn)"; return; }
+    msg.textContent = "Password reset.";
+    msg.style.color = "var(--good)";
+    input.value = "";
+  } catch(e){
+    msg.textContent = "Could not reach the server.";
+    msg.style.color = "var(--warn)";
+  }
+}
+
 function showLogin(){
   document.getElementById("appRoot").style.display = "none";
   document.getElementById("loginScreen").style.display = "flex";
