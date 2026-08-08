@@ -350,21 +350,21 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
     </div>
     <div class="note">Weigh in once or twice a week, same time of day. Daily fluctuations of 1–3 lb are normal water shifts — the trend line is what counts.</div>
     <div id="wtStats"></div>
-    <canvas id="chartWeight" height="220" data-mobile-height="150"></canvas>
+    <canvas id="chartWeight" height="220" data-base-height="220" data-mobile-height="150"></canvas>
     <div id="wtList"></div>
   </div>
   <div class="card">
     <h2>Daily Protein — Last 14 Days</h2>
-    <canvas id="chartProtein" height="200" data-mobile-height="140"></canvas>
+    <canvas id="chartProtein" height="200" data-base-height="200" data-mobile-height="140"</canvas>
   </div>
   <div class="card">
     <h2>Calories In vs. Burned — Last 14 Days</h2>
     <p style="font-size:.85rem;color:var(--muted)">"Burned" here shows exercise calories you logged. Your body also burns your baseline (TDEE) every day — see Calculators.</p>
-    <canvas id="chartCals" height="200" data-mobile-height="140"></canvas>
+    <canvas id="chartCals" height="200" data-base-height="200" data-mobile-height="140"</canvas>
   </div>
   <div class="card">
     <h2>Workouts Completed Per Week</h2>
-    <canvas id="chartWorkouts" height="200" data-mobile-height="140"></canvas>
+    <canvas id="chartWorkouts" height="200" data-base-height="200" data-mobile-height="140"</canvas>
   </div>
   <div class="card">
     <h2>Plan Sessions Completed — Last 30 Days</h2>
@@ -1421,7 +1421,13 @@ function setupCanvas(id){
   const c = document.getElementById(id);
   const cssW = c.clientWidth || 800;
   const mobileH = parseInt(c.getAttribute("data-mobile-height"));
-  const cssH = (window.innerWidth<=480 && mobileH) ? mobileH : (parseInt(c.getAttribute("height"))||200);
+  // Read the base height from a dedicated data-* attribute, never from the
+  // canvas's own "height" attribute -- canvas.height is a *reflected* IDL
+  // attribute, so c.height=cssH*r below also rewrites height="..." to the
+  // scaled value. Reading it back here would compound that scale by r on
+  // every redraw (220 -> 440 -> 880 -> ... whenever devicePixelRatio != 1).
+  const baseH = parseInt(c.getAttribute("data-base-height"))||200;
+  const cssH = (window.innerWidth<=480 && mobileH) ? mobileH : baseH;
   const r = window.devicePixelRatio||1;
   c.width = cssW*r; c.height = cssH*r; c.style.height = cssH+"px";
   const ctx = c.getContext("2d");
