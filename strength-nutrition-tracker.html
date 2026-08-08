@@ -46,6 +46,8 @@ button.del{background:none;border:none;color:var(--warn);font-size:1.05rem;curso
 table{width:100%;border-collapse:collapse;font-size:.92rem;margin:8px 0}
 th{text-align:left;color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;padding:6px 8px;border-bottom:2px solid var(--line)}
 td{padding:7px 8px;border-bottom:1px solid var(--line)}
+tr.tapRow{cursor:pointer}
+tr.tapRow:hover td{background:var(--accent-light)}
 .chip{display:inline-block;background:var(--plum-light);color:var(--plum);border:1px solid var(--plum);border-radius:20px;padding:5px 12px;font-size:.83rem;margin:3px;cursor:pointer;font-weight:600}
 .chip:hover{background:var(--plum);color:#fff}
 .suggestList{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:260px;overflow-y:auto;z-index:20;margin-top:4px}
@@ -92,8 +94,19 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 .pager button{border:1.5px solid var(--accent);background:transparent;color:var(--accent-dark);border-radius:8px;padding:6px 14px;font-size:.85rem;font-weight:600;cursor:pointer}
 .pager button:disabled{opacity:.4;cursor:default}
 .pager .pageinfo{font-size:.85rem;color:var(--muted)}
-.microTable{font-size:.85rem}
-.microTable th,.microTable td{padding:5px 8px;white-space:nowrap}
+.microGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
+.microCard{background:var(--accent-light);border-radius:10px;padding:8px 10px}
+.microCard.warn{background:#fdeaea}
+.microTop{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.microIcon{font-size:1rem}
+.microLabel{font-size:.78rem;font-weight:700;color:var(--accent-dark);flex:1}
+.microAmt{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.microBarOuter{background:var(--line);border-radius:6px;height:7px;overflow:hidden}
+.microBarInner{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-dark));border-radius:6px;min-width:2%}
+.microBarInner.over{background:linear-gradient(90deg,var(--warn),#8e1c1c)}
+.microBarInner.gold{background:linear-gradient(90deg,var(--gold),#a3831c)}
+.microRemain{font-size:.72rem;color:var(--muted);margin-top:4px}
+.microCard.warn .microRemain{color:var(--warn);font-weight:600}
 .rlist{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .rlist .rrow{border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;align-items:center;gap:12px;padding:10px 12px}
 .rlist .rrow .remoji{font-size:32px;flex:none;width:44px;text-align:center}
@@ -188,7 +201,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <!-- ============ DASHBOARD ============ -->
 <section class="tab active" id="tab-dashboard">
   <div class="card" id="setupCard" style="display:none">
-    <h2>Welcome! Let's set up your plan</h2>
+    <h2>Welcome! Let's Set Up Your Plan</h2>
     <p style="font-size:.92rem;color:var(--muted)">Enter your details once — everything else calculates automatically. You can change these anytime in Calculators.</p>
     <div class="flexrow">
       <div><label>Plan start date</label><input type="date" id="setupStart"></div>
@@ -204,7 +217,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <!-- ============ EXERCISE ============ -->
 <section class="tab" id="tab-exercise">
   <div class="card">
-    <h2>Your Week-by-Week Plan</h2>
+    <h2>Your Week-By-Week Plan</h2>
     <p style="font-size:.9rem;color:var(--muted)">Check off each session as you complete it. Weeks keep going past week 8 — the plan extends automatically, and you can add more with the button at the bottom.</p>
     <div class="note"><b>Progressive overload rule:</b> when all rounds and reps feel easy with good form, increase the weight at your next session. Your equipment: Rogue rack &amp; barbell, dumbbells, kettlebells, leg machine, stationary bike, 12-lb med ball, bands, foam rollers.</div>
     <div class="warnnote"><b>🦵 Knee-recovery rules (apply to every session):</b> warm up on the bike first · work only in a pain-free range · box squats limit your depth — use them · skip leg extensions for now · never foam-roll the knee joint itself · mild muscle soreness is fine, sharp or swelling-type knee pain means stop. Have your doctor or physical therapist confirm this plan fits your specific injury.</div>
@@ -219,7 +232,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
       <div><label>Date</label><input type="date" id="workoutDate"></div>
       <div style="flex:2"><label>Session name</label><input type="text" id="workoutSessionName" placeholder="e.g., Leg day, Upper body, Full body"></div>
     </div>
-    <h3>Add an exercise</h3>
+    <h3>Add An Exercise</h3>
     <div class="flexrow">
       <div style="flex:2"><label>Exercise</label><select id="workoutExerciseSelect" onchange="toggleCustomExerciseInput()"></select></div>
       <div style="flex:2;display:none" id="customExerciseWrap"><label>Exercise name</label><input type="text" id="customExerciseName" placeholder="Type the exercise name"></div>
@@ -249,11 +262,11 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
     </div>
     <div id="proteinSummary"></div>
     <div id="microSummary"></div>
-    <h3>Add a meal or snack</h3>
+    <h3>Add A Meal Or Snack</h3>
     <div class="flexrow">
       <div style="flex:2"><label>Meal name</label><input type="text" id="mealName" placeholder="e.g., Breakfast bowl, Lunch"></div>
     </div>
-    <h4 style="margin:12px 0 4px">Add ingredients</h4>
+    <h4 style="margin:12px 0 4px">Add Ingredients</h4>
     <p style="font-size:.85rem;color:var(--muted);margin-bottom:6px">Search fruits, veggies, proteins, and more — tap a result to add it. Add as many ingredients as make up this meal, then save the whole meal below.</p>
     <div class="flexrow" style="position:relative">
       <div style="flex:1">
@@ -283,10 +296,10 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
         <div><button class="btn ghost" onclick="addCustomIngredient()">+ Add ingredient</button></div>
       </div>
     </details>
-    <h4 style="margin:14px 0 4px">Ingredients in this meal</h4>
+    <h4 style="margin:14px 0 4px">Ingredients In This Meal</h4>
     <div id="mealIngredientsPreview"></div>
     <button class="btn" onclick="saveMealEntry()">Add Meal</button>
-    <h3>📷 Scan a packaged food (barcode)</h3>
+    <h3>📷 Scan A Packaged Food (Barcode)</h3>
     <p style="font-size:.85rem;color:var(--muted)">Uses your camera and the free Open Food Facts database — needs internet. No camera? Type the number printed under the bars.</p>
     <div class="flexrow">
       <div style="flex:2"><label>Barcode number</label><input type="text" id="barcodeInput" inputmode="numeric" placeholder="e.g., 016000275270"></div>
@@ -316,10 +329,14 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <!-- ============ RECIPES ============ -->
 <section class="tab" id="tab-recipes">
   <div class="card">
-    <h2>What's in your kitchen?</h2>
+    <h2>What's In Your Kitchen?</h2>
     <p style="font-size:.9rem;color:var(--muted)">Add ingredients you have on hand (one at a time, or comma-separated). The suggested meals below re-sort to match what you've got.</p>
-    <div class="flexrow">
-      <div style="flex:3"><label>Ingredient</label><input type="text" id="pantryInput" placeholder="e.g., chicken breast, broccoli, quinoa"></div>
+    <div class="flexrow" style="position:relative">
+      <div style="flex:3">
+        <label>Ingredient</label>
+        <input type="text" id="pantryInput" placeholder="e.g., chicken breast, broccoli, quinoa" autocomplete="off" oninput="onPantrySearchInput()" onfocus="onPantrySearchInput()">
+        <div id="pantrySuggestions" class="suggestList" style="display:none"></div>
+      </div>
       <div><button class="btn" onclick="addPantry()">Add</button></div>
     </div>
     <div id="pantryChips" style="margin-top:10px"></div>
@@ -333,7 +350,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
     <div class="note" style="margin-top:12px">Every recipe hits the 25–38 g protein-per-meal target from your plan. "Log this meal" adds it straight to today's meal log.</div>
   </div>
   <div class="card">
-    <h2>More ideas from the web 🌐</h2>
+    <h2>More Ideas From The Web 🌐</h2>
     <p style="font-size:.88rem;color:var(--muted)">Searches TheMealDB with up to three of your ingredients — real photos and full recipes (needs internet). Nutrition isn't included, so log those meals manually.</p>
     <button class="btn secondary" onclick="findOnlineIdeas()">Find online recipes</button>
     <div class="rgrid" id="onlineIdeas"></div>
@@ -401,7 +418,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
     <canvas id="chartProtein" height="200" data-base-height="200" data-mobile-height="140"</canvas>
   </div>
   <div class="card">
-    <h2>Calories In vs. Burned — Last 14 Days</h2>
+    <h2>Calories In Vs. Burned — Last 14 Days</h2>
     <p style="font-size:.85rem;color:var(--muted)">"Burned" here shows exercise calories you logged. Your body also burns your baseline (TDEE) every day — see Calculators.</p>
     <canvas id="chartCals" height="200" data-base-height="200" data-mobile-height="140"</canvas>
   </div>
@@ -435,7 +452,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <!-- ============ DOCTOR ============ -->
 <section class="tab" id="tab-doctor">
   <div class="card">
-    <h2>Questions for Your Doctor</h2>
+    <h2>Questions For Your Doctor</h2>
     <p style="font-size:.9rem;color:var(--muted)">Bring this list to your appointment. Type your doctor's answers in the boxes — they save automatically.</p>
     <div class="flexrow">
       <div><label>Appointment date</label><input type="date" id="apptDate" onchange="saveAppt()"></div>
@@ -443,7 +460,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
   </div>
   <div id="docQuestions"></div>
   <div class="card">
-    <h3>Add your own question</h3>
+    <h3>Add Your Own Question</h3>
     <div class="flexrow">
       <div style="flex:3"><input type="text" id="newDocQ" placeholder="Type a question to ask..."></div>
       <div><button class="btn" onclick="addDocQ()">Add question</button></div>
@@ -823,7 +840,144 @@ const FOODS = [
   {name:"Cherry tomatoes", serving:"1 cup", protein:1.5, cals:27, fiber:1.8, sugar:4, sodium:8, vitaminD:0, calcium:15, iron:0.4, potassium:353},
   {name:"Butternut squash, cooked", serving:"1 cup", protein:1.8, cals:82, fiber:6.6, sugar:4, sodium:8, vitaminD:0, calcium:84, iron:1.2, potassium:582},
   {name:"Grapefruit", serving:"1/2 medium", protein:0.9, cals:52, fiber:2, sugar:11, sodium:0, vitaminD:0, calcium:27, iron:0.1, potassium:166},
-  {name:"Pear", serving:"1 medium", protein:0.6, cals:101, fiber:5.5, sugar:17, sodium:2, vitaminD:0, calcium:16, iron:0.4, potassium:206}
+  {name:"Pear", serving:"1 medium", protein:0.6, cals:101, fiber:5.5, sugar:17, sodium:2, vitaminD:0, calcium:16, iron:0.4, potassium:206},
+  // Lettuce, salad ingredients, and raw counterparts to the cooked veggies above
+  {name:"Lettuce, romaine", serving:"2 cups shredded", protein:1, cals:16, fiber:2, sugar:1, sodium:8, vitaminD:0, calcium:32, iron:0.8, potassium:290},
+  {name:"Lettuce, iceberg", serving:"2 cups shredded", protein:0.9, cals:16, fiber:1.4, sugar:1.4, sodium:12, vitaminD:0, calcium:22, iron:0.4, potassium:180},
+  {name:"Mixed salad greens", serving:"2 cups", protein:1.5, cals:18, fiber:1.6, sugar:0.8, sodium:20, vitaminD:0, calcium:40, iron:1, potassium:250},
+  {name:"Arugula", serving:"2 cups", protein:1.3, cals:10, fiber:0.8, sugar:0.6, sodium:11, vitaminD:0, calcium:64, iron:0.6, potassium:184},
+  {name:"Broccoli, raw", serving:"1 cup chopped", protein:2.6, cals:31, fiber:2.4, sugar:1.5, sodium:30, vitaminD:0, calcium:43, iron:0.7, potassium:288},
+  {name:"Cauliflower, raw", serving:"1 cup chopped", protein:2, cals:25, fiber:2, sugar:2, sodium:30, vitaminD:0, calcium:22, iron:0.4, potassium:320},
+  {name:"Green beans, raw", serving:"1 cup", protein:2, cals:31, fiber:2.7, sugar:3.3, sodium:6, vitaminD:0, calcium:37, iron:1, potassium:211},
+  {name:"Asparagus, raw", serving:"1 cup", protein:2.9, cals:27, fiber:2.8, sugar:1.9, sodium:3, vitaminD:0, calcium:32, iron:2.9, potassium:271},
+  {name:"Brussels sprouts, raw", serving:"1 cup shredded", protein:3, cals:38, fiber:3.3, sugar:2.2, sodium:22, vitaminD:0, calcium:37, iron:1.2, potassium:342},
+  {name:"Zucchini, raw", serving:"1 cup sliced", protein:1.5, cals:20, fiber:1, sugar:3, sodium:10, vitaminD:0, calcium:19, iron:0.4, potassium:325},
+  {name:"Butternut squash, raw", serving:"1 cup cubed", protein:1.4, cals:63, fiber:2, sugar:3, sodium:6, vitaminD:0, calcium:53, iron:0.9, potassium:493},
+  {name:"Radish", serving:"1/2 cup sliced", protein:0.4, cals:9, fiber:0.9, sugar:1, sodium:23, vitaminD:0, calcium:14, iron:0.2, potassium:135},
+  {name:"Croutons", serving:"1/4 cup", protein:1.5, cals:31, fiber:0.4, sugar:0.4, sodium:75, vitaminD:0, calcium:8, iron:0.3, potassium:15},
+  {name:"Olives, black", serving:"10 olives", protein:0.3, cals:37, fiber:1, sugar:0, sodium:280, vitaminD:0, calcium:10, iron:0.5, potassium:2},
+  {name:"Olives, green", serving:"10 olives", protein:0.3, cals:41, fiber:1.3, sugar:0, sodium:400, vitaminD:0, calcium:8, iron:0.2, potassium:8},
+  {name:"Feta cheese", serving:"1/4 cup crumbled", protein:6, cals:100, fiber:0, sugar:1.2, sodium:370, vitaminD:0, calcium:140, iron:0.2, potassium:35},
+  {name:"Sunflower seeds", serving:"2 tbsp", protein:3.3, cals:104, fiber:1.7, sugar:0.4, sodium:1, vitaminD:0, calcium:14, iron:0.9, potassium:125},
+  {name:"Ranch dressing", serving:"2 tbsp", protein:0.3, cals:145, fiber:0, sugar:1.5, sodium:270, vitaminD:0, calcium:10, iron:0, potassium:20},
+  {name:"Balsamic vinaigrette", serving:"2 tbsp", protein:0, cals:90, fiber:0, sugar:2, sodium:230, vitaminD:0, calcium:0, iron:0.1, potassium:15},
+  {name:"Hard-boiled egg", serving:"1 large", protein:6, cals:78, fiber:0, sugar:0.6, sodium:62, vitaminD:1, calcium:25, iron:0.6, potassium:63},
+  // Soy & tofu products
+  {name:"Tempeh", serving:"3 oz", protein:17, cals:160, fiber:5, sugar:0, sodium:7, vitaminD:0, calcium:70, iron:2, potassium:340},
+  {name:"Soy milk", serving:"1 cup", protein:7, cals:80, fiber:1, sugar:1, sodium:90, vitaminD:2.5, calcium:300, iron:0.6, potassium:290},
+  {name:"Miso paste", serving:"1 tbsp", protein:2, cals:34, fiber:1, sugar:3, sodium:630, vitaminD:0, calcium:8, iron:0.4, potassium:40},
+  {name:"Soy sauce (tamari)", serving:"1 tbsp", protein:1.9, cals:11, fiber:0, sugar:0, sodium:900, vitaminD:0, calcium:3, iron:0.2, potassium:35},
+  {name:"Natto", serving:"1/2 cup", protein:15, cals:186, fiber:5, sugar:2, sodium:6, vitaminD:0, calcium:190, iron:6, potassium:530},
+  {name:"Silken tofu", serving:"1/2 cup", protein:8, cals:73, fiber:0.4, sugar:0.8, sodium:7, vitaminD:0, calcium:20, iron:1.2, potassium:150},
+  // African (West African, Ethiopian, Moroccan)
+  {name:"Injera (Ethiopian flatbread)", serving:"1 piece", protein:4, cals:120, fiber:2, sugar:0, sodium:5, vitaminD:0, calcium:20, iron:2, potassium:150},
+  {name:"Doro wat (Ethiopian chicken stew)", serving:"1 cup", protein:26, cals:320, fiber:3, sugar:4, sodium:520, vitaminD:0, calcium:40, iron:3, potassium:480},
+  {name:"Misir wat (Ethiopian lentil stew)", serving:"1 cup", protein:12, cals:230, fiber:9, sugar:3, sodium:420, vitaminD:0, calcium:40, iron:4, potassium:500},
+  {name:"Couscous, cooked", serving:"1/2 cup", protein:3, cals:88, fiber:1, sugar:0, sodium:4, vitaminD:0, calcium:6, iron:0.3, potassium:46},
+  {name:"Chicken tagine", serving:"1 cup", protein:24, cals:300, fiber:3, sugar:6, sodium:480, vitaminD:0, calcium:40, iron:2, potassium:450},
+  {name:"Harira soup (Moroccan)", serving:"1 cup", protein:9, cals:180, fiber:5, sugar:3, sodium:520, vitaminD:0, calcium:50, iron:2.5, potassium:400},
+  {name:"Jollof rice", serving:"1 cup", protein:5, cals:260, fiber:2, sugar:3, sodium:420, vitaminD:0, calcium:30, iron:1.5, potassium:280},
+  {name:"West African peanut stew", serving:"1 cup", protein:14, cals:310, fiber:5, sugar:5, sodium:400, vitaminD:0, calcium:50, iron:2, potassium:520},
+  {name:"Fufu", serving:"1/2 cup", protein:1, cals:150, fiber:2, sugar:1, sodium:5, vitaminD:0, calcium:15, iron:0.6, potassium:400},
+  {name:"Plantain, fried", serving:"1/2 cup", protein:1, cals:180, fiber:2, sugar:12, sodium:5, vitaminD:0, calcium:5, iron:0.6, potassium:465},
+  {name:"Egusi soup (Nigerian)", serving:"1 cup", protein:15, cals:280, fiber:4, sugar:2, sodium:450, vitaminD:0, calcium:60, iron:3, potassium:400},
+  // Asian (Thai, Vietnamese, Chinese, Japanese, Korean)
+  {name:"Pad Thai", serving:"1 cup", protein:14, cals:350, fiber:2, sugar:8, sodium:700, vitaminD:0, calcium:60, iron:2, potassium:300},
+  {name:"Thai green curry", serving:"1 cup", protein:16, cals:310, fiber:3, sugar:5, sodium:650, vitaminD:0, calcium:40, iron:2, potassium:400},
+  {name:"Tom yum soup", serving:"1 cup", protein:8, cals:90, fiber:1, sugar:3, sodium:800, vitaminD:0, calcium:20, iron:1, potassium:300},
+  {name:"Pho (Vietnamese noodle soup)", serving:"1 bowl", protein:22, cals:400, fiber:2, sugar:4, sodium:1100, vitaminD:0, calcium:40, iron:3, potassium:450},
+  {name:"Spring roll, fresh", serving:"1 roll", protein:5, cals:100, fiber:1.5, sugar:2, sodium:190, vitaminD:0, calcium:20, iron:0.8, potassium:150},
+  {name:"California roll (sushi)", serving:"6 pieces", protein:9, cals:255, fiber:2, sugar:6, sodium:430, vitaminD:0, calcium:20, iron:0.7, potassium:150},
+  {name:"Miso soup", serving:"1 cup", protein:4, cals:40, fiber:1, sugar:1, sodium:630, vitaminD:0, calcium:20, iron:0.8, potassium:60},
+  {name:"Ramen (pork)", serving:"1 bowl", protein:20, cals:500, fiber:3, sugar:3, sodium:1800, vitaminD:0, calcium:60, iron:3, potassium:400},
+  {name:"Kimchi", serving:"1/2 cup", protein:1.5, cals:23, fiber:2, sugar:2, sodium:420, vitaminD:0, calcium:33, iron:0.5, potassium:160},
+  {name:"Bibimbap", serving:"1 bowl", protein:20, cals:490, fiber:5, sugar:5, sodium:750, vitaminD:0, calcium:80, iron:3, potassium:600},
+  {name:"Fried rice", serving:"1 cup", protein:8, cals:330, fiber:1.5, sugar:2, sodium:700, vitaminD:0, calcium:30, iron:1.5, potassium:200},
+  {name:"Dumplings/potstickers", serving:"4 pieces", protein:9, cals:220, fiber:1, sugar:1, sodium:480, vitaminD:0, calcium:20, iron:1, potassium:130},
+  {name:"Mapo tofu", serving:"1 cup", protein:16, cals:280, fiber:2, sugar:2, sodium:850, vitaminD:0, calcium:150, iron:2.5, potassium:350},
+  {name:"General Tso's chicken", serving:"1 cup", protein:22, cals:430, fiber:1, sugar:18, sodium:900, vitaminD:0, calcium:30, iron:1.5, potassium:280},
+  {name:"Rice noodles, cooked", serving:"1 cup", protein:2, cals:190, fiber:1, sugar:0, sodium:30, vitaminD:0, calcium:10, iron:0.3, potassium:20},
+  {name:"Bok choy, cooked", serving:"1 cup", protein:2.7, cals:20, fiber:1.7, sugar:1.2, sodium:58, vitaminD:0, calcium:158, iron:1.8, potassium:630},
+  {name:"Gyoza (vegetable)", serving:"4 pieces", protein:7, cals:170, fiber:2, sugar:1, sodium:350, vitaminD:0, calcium:20, iron:1, potassium:150},
+  // Middle Eastern / Arabic / Jordanian
+  {name:"Falafel", serving:"4 pieces", protein:7, cals:225, fiber:5, sugar:1, sodium:370, vitaminD:0, calcium:30, iron:2, potassium:300},
+  {name:"Tabbouleh", serving:"1 cup", protein:3, cals:120, fiber:3, sugar:2, sodium:180, vitaminD:0, calcium:30, iron:1.5, potassium:220},
+  {name:"Baba ganoush", serving:"1/4 cup", protein:1.5, cals:70, fiber:2, sugar:2, sodium:160, vitaminD:0, calcium:15, iron:0.5, potassium:150},
+  {name:"Pita bread", serving:"1 piece", protein:5, cals:165, fiber:1, sugar:0.6, sodium:320, vitaminD:0, calcium:50, iron:1.6, potassium:70},
+  {name:"Chicken shawarma", serving:"4 oz", protein:26, cals:230, fiber:0, sugar:1, sodium:520, vitaminD:0, calcium:20, iron:1.5, potassium:350},
+  {name:"Kibbeh", serving:"2 pieces", protein:12, cals:250, fiber:1, sugar:1, sodium:380, vitaminD:0, calcium:20, iron:2, potassium:280},
+  {name:"Mansaf (Jordanian lamb & rice)", serving:"1 cup", protein:22, cals:410, fiber:2, sugar:3, sodium:560, vitaminD:0, calcium:120, iron:2.5, potassium:400},
+  {name:"Baklava", serving:"1 piece", protein:3, cals:230, fiber:1, sugar:18, sodium:90, vitaminD:0, calcium:20, iron:0.8, potassium:80},
+  {name:"Stuffed grape leaves (dolma)", serving:"4 pieces", protein:3, cals:140, fiber:2, sugar:1, sodium:390, vitaminD:0, calcium:30, iron:1.2, potassium:220},
+  {name:"Labneh", serving:"1/4 cup", protein:5, cals:80, fiber:0, sugar:3, sodium:35, vitaminD:0, calcium:130, iron:0, potassium:120},
+  {name:"Lentil soup (Middle Eastern)", serving:"1 cup", protein:9, cals:180, fiber:8, sugar:2, sodium:480, vitaminD:0, calcium:35, iron:3, potassium:400},
+  {name:"Fattoush salad", serving:"1 cup", protein:2, cals:110, fiber:2, sugar:3, sodium:220, vitaminD:0, calcium:30, iron:0.8, potassium:250},
+  // Spanish
+  {name:"Paella", serving:"1 cup", protein:20, cals:380, fiber:2, sugar:2, sodium:620, vitaminD:0, calcium:40, iron:2, potassium:350},
+  {name:"Gazpacho", serving:"1 cup", protein:2, cals:60, fiber:2, sugar:6, sodium:420, vitaminD:0, calcium:25, iron:0.8, potassium:400},
+  {name:"Tortilla española", serving:"1 slice", protein:7, cals:180, fiber:1, sugar:1, sodium:220, vitaminD:0.5, calcium:20, iron:1, potassium:300},
+  {name:"Jamón serrano", serving:"2 oz", protein:14, cals:90, fiber:0, sugar:0, sodium:700, vitaminD:0, calcium:5, iron:0.8, potassium:220},
+  {name:"Patatas bravas", serving:"1/2 cup", protein:2, cals:180, fiber:2, sugar:1, sodium:320, vitaminD:0, calcium:15, iron:0.6, potassium:400},
+  {name:"Manchego cheese", serving:"1 oz", protein:7, cals:110, fiber:0, sugar:0, sodium:200, vitaminD:0, calcium:190, iron:0.2, potassium:20},
+  // Greek
+  {name:"Greek salad", serving:"1 cup", protein:3, cals:110, fiber:2, sugar:3, sodium:350, vitaminD:0, calcium:80, iron:0.8, potassium:280},
+  {name:"Tzatziki", serving:"1/4 cup", protein:2, cals:35, fiber:0, sugar:2, sodium:90, vitaminD:0, calcium:50, iron:0.1, potassium:80},
+  {name:"Spanakopita", serving:"1 piece", protein:6, cals:220, fiber:2, sugar:1, sodium:380, vitaminD:0, calcium:120, iron:1.8, potassium:220},
+  {name:"Chicken gyro", serving:"4 oz", protein:27, cals:250, fiber:0, sugar:1, sodium:480, vitaminD:0, calcium:30, iron:1.5, potassium:340},
+  {name:"Moussaka", serving:"1 cup", protein:16, cals:340, fiber:3, sugar:5, sodium:520, vitaminD:0, calcium:120, iron:1.8, potassium:450},
+  {name:"Souvlaki (chicken)", serving:"4 oz", protein:28, cals:220, fiber:0, sugar:0, sodium:380, vitaminD:0, calcium:15, iron:1.3, potassium:350},
+  // Mexican
+  {name:"Corn tortilla", serving:"1 piece", protein:1.5, cals:52, fiber:1.5, sugar:0, sodium:12, vitaminD:0, calcium:46, iron:0.3, potassium:60},
+  {name:"Flour tortilla", serving:"1 piece", protein:3, cals:110, fiber:1, sugar:0.5, sodium:230, vitaminD:0, calcium:50, iron:1, potassium:40},
+  {name:"Guacamole", serving:"1/4 cup", protein:1, cals:100, fiber:3, sugar:0.5, sodium:150, vitaminD:0, calcium:6, iron:0.3, potassium:250},
+  {name:"Salsa", serving:"1/4 cup", protein:0.6, cals:18, fiber:0.8, sugar:2, sodium:220, vitaminD:0, calcium:6, iron:0.2, potassium:130},
+  {name:"Chicken tacos", serving:"2 tacos", protein:24, cals:320, fiber:3, sugar:2, sodium:520, vitaminD:0, calcium:80, iron:1.8, potassium:400},
+  {name:"Chicken burrito bowl", serving:"1 bowl", protein:30, cals:520, fiber:8, sugar:4, sodium:900, vitaminD:0, calcium:150, iron:3, potassium:700},
+  {name:"Chicken enchiladas", serving:"2 pieces", protein:24, cals:420, fiber:3, sugar:3, sodium:780, vitaminD:0, calcium:180, iron:2, potassium:450},
+  {name:"Refried beans", serving:"1/2 cup", protein:7, cals:120, fiber:7, sugar:0.5, sodium:400, vitaminD:0, calcium:40, iron:1.5, potassium:340},
+  {name:"Elote (Mexican street corn)", serving:"1 ear", protein:5, cals:190, fiber:3, sugar:6, sodium:280, vitaminD:0, calcium:60, iron:0.8, potassium:280},
+  {name:"Pozole", serving:"1 cup", protein:18, cals:250, fiber:4, sugar:2, sodium:650, vitaminD:0, calcium:40, iron:1.8, potassium:400},
+  {name:"Chilaquiles", serving:"1 cup", protein:10, cals:320, fiber:3, sugar:3, sodium:520, vitaminD:0, calcium:120, iron:1.5, potassium:350},
+  {name:"Tamale", serving:"1 piece", protein:8, cals:280, fiber:2, sugar:1, sodium:420, vitaminD:0, calcium:40, iron:1.2, potassium:220},
+  // Peruvian
+  {name:"Ceviche", serving:"1 cup", protein:20, cals:180, fiber:1, sugar:2, sodium:420, vitaminD:2, calcium:30, iron:1, potassium:400},
+  {name:"Lomo saltado", serving:"1 cup", protein:24, cals:380, fiber:2, sugar:4, sodium:620, vitaminD:0, calcium:30, iron:2.5, potassium:500},
+  {name:"Aji amarillo sauce", serving:"1 tbsp", protein:0.2, cals:15, fiber:0.3, sugar:1, sodium:70, vitaminD:0, calcium:2, iron:0.1, potassium:30},
+  {name:"Causa (Peruvian potato dish)", serving:"1 piece", protein:8, cals:220, fiber:2, sugar:1, sodium:320, vitaminD:0, calcium:20, iron:1, potassium:450},
+  {name:"Anticuchos (beef skewers)", serving:"3 pieces", protein:18, cals:210, fiber:0, sugar:1, sodium:380, vitaminD:0, calcium:15, iron:2, potassium:300},
+  // Chilean
+  {name:"Empanada (beef)", serving:"1 piece", protein:10, cals:280, fiber:1, sugar:1, sodium:420, vitaminD:0, calcium:30, iron:1.5, potassium:200},
+  {name:"Pastel de choclo", serving:"1 cup", protein:16, cals:350, fiber:3, sugar:6, sodium:480, vitaminD:0, calcium:40, iron:2, potassium:450},
+  {name:"Chilean sea bass, cooked", serving:"3 oz", protein:20, cals:170, fiber:0, sugar:0, sodium:70, vitaminD:5, calcium:15, iron:0.4, potassium:380},
+  {name:"Cazuela (Chilean stew)", serving:"1 cup", protein:18, cals:230, fiber:3, sugar:3, sodium:450, vitaminD:0, calcium:35, iron:1.8, potassium:480},
+  // Guatemalan
+  {name:"Tamale (Guatemalan)", serving:"1 piece", protein:9, cals:260, fiber:2, sugar:1, sodium:400, vitaminD:0, calcium:35, iron:1.3, potassium:230},
+  {name:"Pepian (Guatemalan stew)", serving:"1 cup", protein:20, cals:290, fiber:3, sugar:3, sodium:480, vitaminD:0, calcium:40, iron:2.2, potassium:460},
+  {name:"Black bean soup", serving:"1 cup", protein:12, cals:220, fiber:9, sugar:2, sodium:520, vitaminD:0, calcium:60, iron:2.5, potassium:600},
+  {name:"Chiles rellenos", serving:"1 piece", protein:10, cals:280, fiber:2, sugar:3, sodium:420, vitaminD:0, calcium:150, iron:1.2, potassium:280},
+  // Argentine
+  {name:"Beef empanada (Argentine)", serving:"1 piece", protein:11, cals:290, fiber:1, sugar:1, sodium:430, vitaminD:0, calcium:30, iron:1.8, potassium:210},
+  {name:"Asado (grilled steak)", serving:"4 oz", protein:28, cals:260, fiber:0, sugar:0, sodium:70, vitaminD:0, calcium:15, iron:2.5, potassium:380},
+  {name:"Chimichurri", serving:"2 tbsp", protein:0.3, cals:80, fiber:0.4, sugar:0.2, sodium:150, vitaminD:0, calcium:10, iron:0.4, potassium:60},
+  {name:"Milanesa (breaded cutlet)", serving:"4 oz", protein:24, cals:320, fiber:1, sugar:1, sodium:480, vitaminD:0, calcium:30, iron:1.8, potassium:320},
+  {name:"Choripán", serving:"1 sandwich", protein:16, cals:390, fiber:1, sugar:2, sodium:780, vitaminD:0, calcium:30, iron:1.5, potassium:280},
+  // Jamaican
+  {name:"Jerk chicken", serving:"4 oz", protein:28, cals:230, fiber:0, sugar:2, sodium:480, vitaminD:0, calcium:20, iron:1.3, potassium:340},
+  {name:"Rice and peas (Jamaican)", serving:"1 cup", protein:6, cals:260, fiber:5, sugar:1, sodium:380, vitaminD:0, calcium:40, iron:1.8, potassium:350},
+  {name:"Ackee and saltfish", serving:"1 cup", protein:20, cals:280, fiber:3, sugar:2, sodium:900, vitaminD:0, calcium:60, iron:2, potassium:400},
+  {name:"Curry goat", serving:"1 cup", protein:24, cals:320, fiber:2, sugar:2, sodium:520, vitaminD:0, calcium:30, iron:2.8, potassium:420},
+  {name:"Callaloo", serving:"1 cup", protein:4, cals:60, fiber:3, sugar:1, sodium:280, vitaminD:0, calcium:100, iron:2.2, potassium:450},
+  // Haitian
+  {name:"Griot (Haitian fried pork)", serving:"4 oz", protein:26, cals:340, fiber:0, sugar:1, sodium:450, vitaminD:0, calcium:15, iron:1.5, potassium:400},
+  {name:"Diri ak pwa (rice and beans)", serving:"1 cup", protein:8, cals:270, fiber:6, sugar:1, sodium:380, vitaminD:0, calcium:40, iron:2, potassium:400},
+  {name:"Pikliz (Haitian spicy slaw)", serving:"1/4 cup", protein:0.5, cals:20, fiber:1, sugar:2, sodium:180, vitaminD:0, calcium:15, iron:0.3, potassium:100},
+  {name:"Soup joumou (Haitian squash soup)", serving:"1 cup", protein:14, cals:220, fiber:3, sugar:4, sodium:480, vitaminD:0, calcium:40, iron:1.8, potassium:450},
+  // Cuban
+  {name:"Ropa vieja", serving:"1 cup", protein:24, cals:290, fiber:2, sugar:3, sodium:560, vitaminD:0, calcium:40, iron:2.5, potassium:480},
+  {name:"Cuban black beans", serving:"1 cup", protein:15, cals:230, fiber:15, sugar:1, sodium:420, vitaminD:0, calcium:60, iron:3.6, potassium:610},
+  {name:"Cuban sandwich", serving:"1 sandwich", protein:32, cals:520, fiber:2, sugar:4, sodium:1400, vitaminD:0, calcium:200, iron:2.5, potassium:400},
+  {name:"Moros y cristianos", serving:"1 cup", protein:9, cals:260, fiber:6, sugar:1, sodium:400, vitaminD:0, calcium:40, iron:2, potassium:380},
+  {name:"Yuca, boiled", serving:"1 cup", protein:1.5, cals:220, fiber:2, sugar:2, sodium:20, vitaminD:0, calcium:30, iron:0.5, potassium:450}
 ];
 const METS = [
   ["Brisk walking (3.5 mph)",4.3],["Very brisk walking (4 mph)",5.0],
@@ -974,7 +1128,7 @@ function renderExercise(){
       html += '<div class="checkitem'+(ck?" done":"")+'"><input type="checkbox" '+(ck?"checked":"")+' onchange="toggleCheck(\''+key+'\')"><span class="t"><b>'+sess.title+'</b> · '+sess.rounds+'</span></div>'+
         '<ul class="exlist">'+sess.ex.map(e=>'<li><b>'+e[0]+'</b> — '+e[1]+'</li>').join("")+'</ul>';
     });
-    html += '<h3>Cardio — '+spec.walks+' × '+spec.walkMin+' min: brisk walk or stationary bike</h3>'+
+    html += '<h3>Cardio — '+spec.walks+' × '+spec.walkMin+' Min: Brisk Walk Or Stationary Bike</h3>'+
       '<p style="font-size:.82rem;color:var(--muted)">The bike is ideal while your knee recovers — zero impact. Mix and match with walking as the knee allows.</p>';
     for (let i=0;i<spec.walks;i++){
       const key = "w"+w+"-c"+i, ck = S.checks[key];
@@ -1077,8 +1231,8 @@ function renderCustomWorkoutHistory(){
 
 /* ---------- Meals tab ---------- */
 const MICRO_FIELDS = [
-  ["fiber","Fiber","g"], ["sugar","Sugar","g"], ["sodium","Sodium","mg"],
-  ["vitaminD","Vitamin D","mcg"], ["calcium","Calcium","mg"], ["iron","Iron","mg"], ["potassium","Potassium","mg"]
+  ["fiber","Fiber","g","🌾"], ["sugar","Sugar","g","🍬"], ["sodium","Sodium","mg","🧂"],
+  ["vitaminD","Vitamin D","mcg","☀️"], ["calcium","Calcium","mg","🦴"], ["iron","Iron","mg","🩸"], ["potassium","Potassium","mg","🍌"]
 ];
 // Rough adult daily targets (postmenopausal-woman-leaning, matching this app's target user) -- not medical advice.
 const MICRO_GOALS = { fiber:28, sugar:50, sodium:2300, vitaminD:20, calcium:1200, iron:8, potassium:2600 };
@@ -1097,17 +1251,23 @@ function renderMeals(){
     '<div class="bar-outer"><div class="bar-inner'+(prot>=pLo?" gold":"")+'" style="width:'+pct+'%"></div></div>'+
     '<p style="font-size:.85rem;color:var(--muted)">'+(prot>=pLo ? "🎉 Protein goal reached!" : (pLo-prot)+" g to go — about "+Math.ceil((pLo-prot)/25)+" more protein-anchored meal(s).")+'</p>';
   document.getElementById("microSummary").innerHTML =
-    '<h3 style="margin:10px 0 4px">Micronutrients today</h3>'+
-    '<div style="overflow-x:auto"><table class="microTable"><thead><tr><th>Nutrient</th><th>Consumed</th><th>Goal</th><th>Remaining</th></tr></thead><tbody>'+
-    MICRO_FIELDS.map(([key,label,unit])=>{
+    '<h3 style="margin:10px 0 4px">Micronutrients Today</h3>'+
+    '<div class="microGrid">'+
+    MICRO_FIELDS.map(([key,label,unit,icon])=>{
       const total = Math.round(meals.reduce((a,m)=>a+(+m[key]||0),0)*10)/10;
       const goal = MICRO_GOALS[key];
       const remaining = Math.round((goal-total)*10)/10;
       const over = remaining < 0;
-      const cell = over ? (Math.abs(remaining)+" "+unit+" over") : (remaining+" "+unit+" left");
-      return '<tr><td>'+label+'</td><td>'+total+' '+unit+'</td><td>'+goal+' '+unit+'</td><td'+(over&&WARN_IF_OVER.has(key)?' style="color:var(--warn);font-weight:600"':'')+'>'+cell+'</td></tr>';
+      const pct = Math.max(0, Math.min(100, Math.round(total/goal*100)));
+      const barClass = over && WARN_IF_OVER.has(key) ? "over" : (pct>=100 ? "gold" : "");
+      const remainText = over ? (Math.abs(remaining)+" "+unit+" over") : (remaining+" "+unit+" left");
+      return '<div class="microCard'+(over&&WARN_IF_OVER.has(key)?" warn":"")+'">'+
+        '<div class="microTop"><span class="microIcon">'+icon+'</span><span class="microLabel">'+label+'</span><span class="microAmt">'+total+'/'+goal+' '+unit+'</span></div>'+
+        '<div class="microBarOuter"><div class="microBarInner '+barClass+'" style="width:'+pct+'%"></div></div>'+
+        '<div class="microRemain">'+remainText+'</div>'+
+        '</div>';
     }).join("")+
-    '</tbody></table></div>';
+    '</div>';
   document.getElementById("mealList").innerHTML = meals.length ?
     '<table><thead><tr><th>Meal</th><th>Protein</th><th>Cal</th>'+MICRO_FIELDS.map(([k,label,unit])=>'<th>'+label+'</th>').join("")+'<th></th></tr></thead><tbody>'+
     meals.map(m=>'<tr><td>'+esc(m.name)+'</td><td>'+m.protein+' g</td><td>'+m.cals+'</td>'+
@@ -1155,6 +1315,7 @@ function addSearchedIngredient(i){
   document.getElementById("mealSuggestions").style.display = "none";
   document.getElementById("ingServings").value = "1";
   renderIngredientsPreview();
+  showToast("Added "+f.name+" to current meal", "success");
 }
 function addCustomIngredient(){
   const name = document.getElementById("customIngName").value.trim();
@@ -1216,9 +1377,10 @@ function renderFoodTable(){
   const pager = foodRefPagerHtml(totalPages);
   document.getElementById("foodRefControlsTop").innerHTML = pager;
   document.getElementById("foodRefControlsBottom").innerHTML = pager;
-  document.getElementById("foodTable").innerHTML = pageItems.map(f=>
-    '<tr><td>'+esc(f.name)+'</td><td>'+esc(f.serving)+'</td><td>'+f.protein+' g</td><td>'+f.cals+'</td></tr>'
-  ).join("");
+  document.getElementById("foodTable").innerHTML = pageItems.map(f=>{
+    const idx = FOODS.indexOf(f);
+    return '<tr class="tapRow" onclick="addSearchedIngredient('+idx+')" title="Tap to add to current meal"><td>'+esc(f.name)+'</td><td>'+esc(f.serving)+'</td><td>'+f.protein+' g</td><td>'+f.cals+'</td></tr>';
+  }).join("");
 }
 
 /* ---------- Barcode scanning & lookup ---------- */
@@ -1373,6 +1535,30 @@ function addPantry(){
   renderRecipes();
 }
 function delPantry(i){ S.pantry.splice(i,1); save(); renderRecipes(); }
+function onPantrySearchInput(){
+  const q = document.getElementById("pantryInput").value.trim().toLowerCase();
+  const box = document.getElementById("pantrySuggestions");
+  if (!q){ box.style.display = "none"; box.innerHTML = ""; return; }
+  const matches = FOODS.filter(f=>f.name.toLowerCase().includes(q)).slice(0,8);
+  if (!matches.length){ box.style.display = "none"; box.innerHTML = ""; return; }
+  box.innerHTML = matches.map(f=>{
+    const idx = FOODS.indexOf(f);
+    return '<div class="sitem" onclick="selectPantrySuggestion('+idx+')"><span class="sname">'+esc(f.name)+'</span><span class="smeta">'+esc(f.serving)+'</span></div>';
+  }).join("");
+  box.style.display = "block";
+}
+function selectPantrySuggestion(i){
+  const name = FOODS[i].name.toLowerCase();
+  if (!S.pantry.includes(name)) S.pantry.push(name);
+  save();
+  document.getElementById("pantryInput").value = "";
+  document.getElementById("pantrySuggestions").style.display = "none";
+  renderRecipes();
+}
+document.addEventListener("click", (e)=>{
+  const box = document.getElementById("pantrySuggestions");
+  if (box && !e.target.closest("#pantryInput") && !e.target.closest("#pantrySuggestions")) box.style.display = "none";
+});
 function logRecipe(i){
   const r = RECIPES[i];
   addMeal(r.n, r.p, r.c);
@@ -1444,7 +1630,7 @@ function calcBurn(log){
 function renderActivityLog(){
   const recent = S.activities.slice(-12).reverse();
   document.getElementById("activityLog").innerHTML = recent.length ?
-    '<h3>Recent logged activity</h3><table><thead><tr><th>Date</th><th>Activity</th><th>Min</th><th>Cal</th><th></th></tr></thead><tbody>'+
+    '<h3>Recent Logged Activity</h3><table><thead><tr><th>Date</th><th>Activity</th><th>Min</th><th>Cal</th><th></th></tr></thead><tbody>'+
     recent.map(a=>'<tr><td>'+fmtDate(a.date)+'</td><td>'+esc(a.name)+'</td><td>'+a.min+'</td><td>'+a.kcal+'</td><td><button class="del" onclick="delAct('+a.id+')">✕</button></td></tr>').join("")+
     '</tbody></table>' : "";
 }
