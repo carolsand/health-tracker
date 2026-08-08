@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 260" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a5c5b"/>
+      <stop offset="55%" stop-color="#0e7c7b"/>
+      <stop offset="100%" stop-color="#7b4b94"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#c9a227"/>
+      <stop offset="100%" stop-color="#f0d27a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="260" rx="22" fill="url(#bg)"/>
+
+  <!-- decorative rings -->
+  <circle cx="1080" cy="55" r="120" fill="#ffffff" opacity="0.06"/>
+  <circle cx="1150" cy="210" r="70" fill="#ffffff" opacity="0.07"/>
+  <circle cx="60" cy="220" r="90" fill="#ffffff" opacity="0.05"/>
+
+  <!-- heartbeat / pulse line -->
+  <polyline points="40,150 150,150 180,90 215,190 245,60 280,150 1160,150"
+            fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="4"
+            stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- dumbbell icon -->
+  <g transform="translate(70,60)">
+    <rect x="0" y="26" width="16" height="40" rx="5" fill="#ffffff"/>
+    <rect x="86" y="26" width="16" height="40" rx="5" fill="#ffffff"/>
+    <rect x="-10" y="34" width="10" height="24" rx="3" fill="#ffffff"/>
+    <rect x="102" y="34" width="10" height="24" rx="3" fill="#ffffff"/>
+    <rect x="16" y="42" width="70" height="8" rx="4" fill="#ffffff"/>
+  </g>
+
+  <text x="70" y="165" fill="#ffffff" font-size="52" font-weight="700">Health Tracker</text>
+  <text x="70" y="205" fill="#eafaf9" font-size="21" opacity="0.92">Strength training, nutrition &amp; progress — all in one page, no install required</text>
+
+  <!-- little stat chips -->
+  <g transform="translate(70,222)">
+    <rect x="0" y="0" width="150" height="26" rx="13" fill="#ffffff" opacity="0.15"/>
+    <text x="14" y="18" fill="#ffffff" font-size="13" font-weight="600">💪 Workouts</text>
+    <rect x="160" y="0" width="130" height="26" rx="13" fill="#ffffff" opacity="0.15"/>
+    <text x="174" y="18" fill="#ffffff" font-size="13" font-weight="600">🥗 Nutrition</text>
+    <rect x="300" y="0" width="120" height="26" rx="13" fill="#ffffff" opacity="0.15"/>
+    <text x="314" y="18" fill="#ffffff" font-size="13" font-weight="600">📈 Progress</text>
+    <rect x="430" y="0" width="180" height="26" rx="13" fill="url(#bar)" opacity="0.9"/>
+    <text x="444" y="18" fill="#4a3800" font-size="13" font-weight="700">💾 100% local &amp; private</text>
+  </g>
+</svg>

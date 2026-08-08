@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="hdr" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0a5c5b"/>
+      <stop offset="100%" stop-color="#0e7c7b"/>
+    </linearGradient>
+    <linearGradient id="barfill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0e7c7b"/>
+      <stop offset="100%" stop-color="#0a5c5b"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="960" height="620" rx="16" fill="#faf9f6" stroke="#e6e2da"/>
+
+  <!-- header -->
+  <rect x="0" y="0" width="960" height="60" rx="16" fill="url(#hdr)"/>
+  <rect x="0" y="30" width="960" height="30" fill="url(#hdr)"/>
+  <text x="24" y="34" fill="#ffffff" font-size="18" font-weight="700">Health Tracker</text>
+  <rect x="800" y="16" width="70" height="26" rx="8" fill="#ffffff" opacity="0.18"/>
+  <text x="835" y="33" fill="#ffffff" font-size="11" text-anchor="middle">⬇ Backup</text>
+
+  <!-- nav -->
+  <rect x="0" y="60" width="960" height="42" fill="#ffffff"/>
+  <line x1="0" y1="102" x2="960" y2="102" stroke="#e6e2da" stroke-width="2"/>
+  <g font-size="12.5" font-weight="600">
+    <rect x="16" y="70" width="66" height="26" rx="8" fill="#0e7c7b"/>
+    <text x="49" y="87" fill="#ffffff" text-anchor="middle">Home</text>
+    <text x="120" y="87" fill="#6b6b6b" text-anchor="middle">Exercise</text>
+    <text x="200" y="87" fill="#6b6b6b" text-anchor="middle">Meals</text>
+    <text x="270" y="87" fill="#6b6b6b" text-anchor="middle">Recipes</text>
+    <text x="350" y="87" fill="#6b6b6b" text-anchor="middle">Calculators</text>
+    <text x="440" y="87" fill="#6b6b6b" text-anchor="middle">Progress</text>
+    <text x="530" y="87" fill="#6b6b6b" text-anchor="middle">Doctor Visit</text>
+  </g>
+
+  <!-- this week card -->
+  <rect x="24" y="122" width="912" height="150" rx="14" fill="#ffffff" stroke="#e6e2da"/>
+  <text x="44" y="152" font-size="16" font-weight="700" fill="#0a5c5b">This Week — Week 3</text>
+  <rect x="270" y="136" width="120" height="22" rx="11" fill="#f0e8f5"/>
+  <text x="330" y="151" font-size="11" fill="#7b4b94" text-anchor="middle" font-weight="700">Phase 2 · Load</text>
+
+  <rect x="44" y="164" width="872" height="34" rx="8" fill="#e3f2f1"/>
+  <text x="56" y="185" font-size="12" fill="#0a5c5b">Add weight when 2 rounds of 10 feel manageable. The knee sets the pace.</text>
+
+  <rect x="44" y="208" width="872" height="18" rx="9" fill="#e6e2da"/>
+  <rect x="44" y="208" width="480" height="18" rx="9" fill="url(#barfill)"/>
+  <text x="44" y="244" font-size="12" fill="#6b6b6b">4 of 7 sessions done this week (57%)</text>
+
+  <!-- stat tiles -->
+  <g font-family="'Segoe UI', system-ui, sans-serif">
+    <rect x="44" y="252" width="200" height="0" fill="none"/>
+  </g>
+  <g transform="translate(24,282)">
+    <!-- tile template x4 -->
+    <g>
+      <rect x="0" y="0" width="214" height="82" rx="12" fill="#e3f2f1"/>
+      <text x="107" y="42" font-size="24" font-weight="700" fill="#0a5c5b" text-anchor="middle">64 g</text>
+      <text x="107" y="64" font-size="10.5" fill="#6b6b6b" text-anchor="middle" letter-spacing="0.5">PROTEIN TODAY (GOAL 65–86)</text>
+    </g>
+    <g transform="translate(232,0)">
+      <rect x="0" y="0" width="214" height="82" rx="12" fill="#e3f2f1"/>
+      <text x="107" y="42" font-size="24" font-weight="700" fill="#0a5c5b" text-anchor="middle">1,180</text>
+      <text x="107" y="64" font-size="10.5" fill="#6b6b6b" text-anchor="middle" letter-spacing="0.5">CALORIES EATEN TODAY</text>
+    </g>
+    <g transform="translate(464,0)">
+      <rect x="0" y="0" width="214" height="82" rx="12" fill="#e3f2f1"/>
+      <text x="107" y="42" font-size="24" font-weight="700" fill="#0a5c5b" text-anchor="middle">640</text>
+      <text x="107" y="64" font-size="10.5" fill="#6b6b6b" text-anchor="middle" letter-spacing="0.5">EXERCISE CAL BURNED THIS WEEK</text>
+    </g>
+    <g transform="translate(696,0)">
+      <rect x="0" y="0" width="214" height="82" rx="12" fill="#e3f2f1"/>
+      <text x="107" y="42" font-size="24" font-weight="700" fill="#0a5c5b" text-anchor="middle">161.4 lb</text>
+      <text x="107" y="64" font-size="10.5" fill="#6b6b6b" text-anchor="middle" letter-spacing="0.5">CURRENT WEIGHT (-2.6)</text>
+    </g>
+  </g>
+
+  <!-- today's rhythm card -->
+  <rect x="24" y="392" width="912" height="90" rx="14" fill="#ffffff" stroke="#e6e2da"/>
+  <text x="44" y="420" font-size="15" font-weight="700" fill="#0a5c5b">Today's Rhythm</text>
+  <text x="44" y="444" font-size="13" fill="#2b2b2b">💪 Strength day: Session A — Lower Body + Core (2 rounds). Check it off in the Exercise tab.</text>
+  <text x="44" y="464" font-size="11.5" fill="#6b6b6b">Anchor every meal with 25–35 g protein · 5 walk-or-bike sessions of 30 min this week</text>
+
+  <!-- mini trend chart -->
+  <rect x="24" y="498" width="912" height="102" rx="14" fill="#ffffff" stroke="#e6e2da"/>
+  <text x="44" y="522" font-size="14" font-weight="700" fill="#0a5c5b">Weight Trend</text>
+  <polyline points="60,584 160,578 260,570 360,575 460,560 560,555 660,548 760,540 860,536"
+            fill="none" stroke="#0e7c7b" stroke-width="3" stroke-linecap="round"/>
+  <g fill="#0e7c7b">
+    <circle cx="60" cy="584" r="3.5"/><circle cx="160" cy="578" r="3.5"/><circle cx="260" cy="570" r="3.5"/>
+    <circle cx="360" cy="575" r="3.5"/><circle cx="460" cy="560" r="3.5"/><circle cx="560" cy="555" r="3.5"/>
+    <circle cx="660" cy="548" r="3.5"/><circle cx="760" cy="540" r="3.5"/><circle cx="860" cy="536" r="3.5"/>
+  </g>
+
+  <text x="480" y="612" text-anchor="middle" font-size="11" fill="#9a9a9a">Illustrative mockup — actual numbers reflect your own logged data, stored only in your browser.</text>
+</svg>
