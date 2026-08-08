@@ -1,6 +1,7 @@
 // Interactive one-time account setup. Run with: node scripts/create-user.js
 // Password is read via a masked terminal prompt — never pass it as a CLI arg or env var.
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 const readline = require("readline");
 const bcrypt = require("bcryptjs");
 const db = require("../src/db");
