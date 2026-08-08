@@ -165,8 +165,8 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
     <div class="flexrow">
       <div><label>Plan start date</label><input type="date" id="setupStart"></div>
       <div><label>Current weight (lb)</label><input type="number" id="setupWeight" min="80" max="400" step="0.1"></div>
-      <div><label>Height (inches)</label><input type="number" id="setupHeight" min="48" max="80" value="64"></div>
-      <div><label>Age</label><input type="number" id="setupAge" min="18" max="100" value="61"></div>
+      <div><label>Height (inches)</label><input type="number" id="setupHeight" min="48" max="80"></div>
+      <div><label>Age</label><input type="number" id="setupAge" min="18" max="100"></div>
     </div>
     <button class="btn" onclick="finishSetup()">Start my plan</button>
   </div>
@@ -183,6 +183,33 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
   </div>
   <div id="weeksList"></div>
   <button class="btn ghost" onclick="addWeek()">＋ Add another week</button>
+
+  <div class="card">
+    <h2>Build Your Own Workout</h2>
+    <p style="font-size:.9rem;color:var(--muted)">Not following today's plan session? Log whatever you actually did — pick exercises and enter sets, reps, and weight for each one.</p>
+    <div class="flexrow">
+      <div><label>Date</label><input type="date" id="workoutDate"></div>
+      <div style="flex:2"><label>Session name</label><input type="text" id="workoutSessionName" placeholder="e.g., Leg day, Upper body, Full body"></div>
+    </div>
+    <h3>Add an exercise</h3>
+    <div class="flexrow">
+      <div style="flex:2"><label>Exercise</label><select id="workoutExerciseSelect" onchange="toggleCustomExerciseInput()"></select></div>
+      <div style="flex:2;display:none" id="customExerciseWrap"><label>Exercise name</label><input type="text" id="customExerciseName" placeholder="Type the exercise name"></div>
+    </div>
+    <div class="flexrow">
+      <div><label>Sets</label><input type="number" id="workoutSets" min="1" max="10" value="3"></div>
+      <div><label>Reps</label><input type="number" id="workoutReps" min="1" max="50" value="10"></div>
+      <div><label>Weight (lb)</label><input type="number" id="workoutWeight" min="0" max="500" step="2.5"></div>
+      <div style="flex:2"><label>Notes</label><input type="text" id="workoutNotes" placeholder="optional"></div>
+      <div><button class="btn" onclick="addExerciseToSession()">+ Add to session</button></div>
+    </div>
+    <div id="sessionExercisesPreview"></div>
+    <button class="btn secondary" onclick="saveWorkoutSession()">Save workout session</button>
+  </div>
+  <div class="card">
+    <h2>Your Custom Workout History</h2>
+    <div id="customWorkoutHistory"></div>
+  </div>
 </section>
 
 <!-- ============ MEALS ============ -->
@@ -384,6 +411,7 @@ const DEFAULT_STATE = {
   activities: [],     // {date, name, min, kcal}
   checks: {},         // "w3-s1": true
   pantry: [],         // ingredient strings
+  customWorkouts: [], // {id, date, name, exercises:[{name,sets,reps,weight,notes}]}
   extraWeeks: 0,
   doctor: { answers: {}, custom: [], apptDate: "" }
 };
@@ -708,9 +736,12 @@ document.querySelectorAll("nav button").forEach(b=>{
 function finishSetup(){
   const sd = document.getElementById("setupStart").value || todayStr();
   const w = parseFloat(document.getElementById("setupWeight").value);
+  const h = parseFloat(document.getElementById("setupHeight").value);
+  const a = parseInt(document.getElementById("setupAge").value);
+  if (!h || !a){ alert("Please enter your height and age."); return; }
   S.profile.startDate = sd;
-  S.profile.heightIn = parseFloat(document.getElementById("setupHeight").value)||64;
-  S.profile.age = parseInt(document.getElementById("setupAge").value)||61;
+  S.profile.heightIn = h;
+  S.profile.age = a;
   if (w){ S.profile.startWeight = w; if(!S.weights.length) S.weights.push({date:sd, lbs:w}); }
   save(); renderAll();
 }
@@ -790,6 +821,10 @@ function weekProgress(w){
 
 /* ---------- Exercise tab ---------- */
 function renderExercise(){
+  if (!document.getElementById("workoutDate").value) document.getElementById("workoutDate").value = todayStr();
+  if (!document.getElementById("workoutExerciseSelect").options.length) renderExerciseOptions();
+  renderSessionPreview();
+  renderCustomWorkoutHistory();
   const wrap = document.getElementById("weeksList");
   const cw = currentWeek(), n = totalWeeks();
   let html = "";
@@ -816,6 +851,94 @@ function renderExercise(){
 }
 function toggleCheck(key){ S.checks[key] = !S.checks[key]; save(); renderExercise(); renderDashboard(); }
 function addWeek(){ S.extraWeeks++; save(); renderExercise(); }
+
+/* ---------- Custom workout builder ---------- */
+const EXERCISE_LIBRARY = {
+  "Legs": ["Box squat","Goblet squat","Leg press","Romanian deadlift","Hip thrust","Step-up","Calf raise","Hamstring curl","Lunge"],
+  "Back": ["One-arm dumbbell row","Bent-over row","Lat pulldown","Seated cable row"],
+  "Chest": ["Dumbbell bench press","Push-up","Chest fly"],
+  "Shoulders": ["Overhead press","Lateral raise","Band pull-apart","Kettlebell halo"],
+  "Arms": ["Bicep curl","Tricep extension","Hammer curl"],
+  "Core": ["Plank","Dead bug","Russian twist","Side plank"],
+  "Cardio": ["Stationary bike","Brisk walk","Rowing machine","Elliptical"]
+};
+const EXERCISE_CAT_COLORS = {
+  "Legs":     { bg:"#e3f2ea", text:"#1b6e4f" },
+  "Back":     { bg:"#f3e8fb", text:"#7a3fa0" },
+  "Chest":    { bg:"#fdeee3", text:"#b35900" },
+  "Shoulders":{ bg:"#e6f0fb", text:"#1c5fa8" },
+  "Arms":     { bg:"#fbe7e7", text:"#b83232" },
+  "Core":     { bg:"#e6f7f5", text:"#0f7a72" },
+  "Cardio":   { bg:"#fdf3d7", text:"#8a6d00" },
+  "Other":    { bg:"#e8e8e8", text:"#555" }
+};
+function categoryOf(exerciseName){
+  for (const cat in EXERCISE_LIBRARY){ if (EXERCISE_LIBRARY[cat].includes(exerciseName)) return cat; }
+  return "Other";
+}
+function renderExerciseOptions(){
+  const sel = document.getElementById("workoutExerciseSelect");
+  let html = "";
+  Object.keys(EXERCISE_LIBRARY).forEach(cat=>{
+    html += '<optgroup label="'+cat+'">'+EXERCISE_LIBRARY[cat].map(e=>'<option value="'+esc(e)+'">'+esc(e)+'</option>').join("")+'</optgroup>';
+  });
+  html += '<option value="__other__">Other (type custom name)</option>';
+  sel.innerHTML = html;
+}
+function toggleCustomExerciseInput(){
+  const isOther = document.getElementById("workoutExerciseSelect").value === "__other__";
+  document.getElementById("customExerciseWrap").style.display = isOther ? "block" : "none";
+}
+let sessionExercises = [];
+function addExerciseToSession(){
+  const sel = document.getElementById("workoutExerciseSelect");
+  const name = sel.value === "__other__" ? document.getElementById("customExerciseName").value.trim() : sel.value;
+  if (!name){ alert("Please choose or enter an exercise."); return; }
+  const sets = parseInt(document.getElementById("workoutSets").value)||0;
+  const reps = parseInt(document.getElementById("workoutReps").value)||0;
+  const weight = parseFloat(document.getElementById("workoutWeight").value)||0;
+  const notes = document.getElementById("workoutNotes").value.trim();
+  sessionExercises.push({ name, sets, reps, weight, notes });
+  document.getElementById("customExerciseName").value = "";
+  document.getElementById("workoutNotes").value = "";
+  renderSessionPreview();
+}
+function removeSessionExercise(i){ sessionExercises.splice(i,1); renderSessionPreview(); }
+function renderSessionPreview(){
+  const el = document.getElementById("sessionExercisesPreview");
+  el.innerHTML = sessionExercises.length ?
+    '<table><thead><tr><th>Exercise</th><th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th><th></th></tr></thead><tbody>'+
+    sessionExercises.map((e,i)=>{
+      const c = EXERCISE_CAT_COLORS[categoryOf(e.name)];
+      return '<tr><td><span class="badge" style="background:'+c.bg+';color:'+c.text+'">'+esc(e.name)+'</span></td><td>'+e.sets+'</td><td>'+e.reps+'</td><td>'+(e.weight?e.weight+' lb':'—')+'</td><td>'+esc(e.notes||"")+'</td><td><button class="del" onclick="removeSessionExercise('+i+')">✕</button></td></tr>';
+    }).join("")+
+    '</tbody></table>' : '<p style="color:var(--muted);font-size:.85rem;margin-top:8px">No exercises added yet.</p>';
+}
+function saveWorkoutSession(){
+  if (!sessionExercises.length){ alert("Add at least one exercise first."); return; }
+  const date = document.getElementById("workoutDate").value || todayStr();
+  const name = document.getElementById("workoutSessionName").value.trim() || "Custom workout";
+  S.customWorkouts.push({ id: Date.now(), date, name, exercises: sessionExercises });
+  save();
+  sessionExercises = [];
+  document.getElementById("workoutSessionName").value = "";
+  renderSessionPreview();
+  renderCustomWorkoutHistory();
+}
+function delWorkoutSession(id){ S.customWorkouts = S.customWorkouts.filter(w=>w.id!==id); save(); renderCustomWorkoutHistory(); }
+function renderCustomWorkoutHistory(){
+  const el = document.getElementById("customWorkoutHistory");
+  const sorted = S.customWorkouts.slice().sort((a,b)=> a.date<b.date?1:-1);
+  el.innerHTML = sorted.length ? sorted.map(w=>
+    '<div class="docq"><div class="q">'+esc(w.name)+' <span style="font-weight:400;color:var(--muted)">— '+fmtDate(w.date)+'</span> <button class="del" onclick="delWorkoutSession('+w.id+')">✕</button></div>'+
+    w.exercises.map(e=>{
+      const c = EXERCISE_CAT_COLORS[categoryOf(e.name)];
+      return '<div style="display:flex;align-items:center;gap:8px;margin:4px 0"><span class="badge" style="background:'+c.bg+';color:'+c.text+'">'+esc(e.name)+'</span>'+
+        '<span style="font-size:.88rem;color:var(--muted)">'+e.sets+' sets × '+e.reps+' reps'+(e.weight?' @ '+e.weight+' lb':'')+(e.notes?' — '+esc(e.notes):'')+'</span></div>';
+    }).join("")+
+    '</div>'
+  ).join("") : '<p style="color:var(--muted);font-size:.9rem">No custom workouts logged yet.</p>';
+}
 
 /* ---------- Meals tab ---------- */
 function renderMeals(){

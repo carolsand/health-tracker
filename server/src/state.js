@@ -12,6 +12,7 @@ const DEFAULT_STATE = {
   activities: [],
   checks: {},
   pantry: [],
+  customWorkouts: [],
   extraWeeks: 0,
   doctor: { answers: {}, custom: [], apptDate: "" }
 };
