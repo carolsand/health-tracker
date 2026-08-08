@@ -79,6 +79,19 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 .rcard details summary{cursor:pointer;font-weight:600}
 .rcard .btn{margin-top:auto;padding:7px 12px;font-size:.85rem}
 .match{font-size:.75rem;background:#fdf3d7;color:#8a6d00;border-radius:10px;padding:2px 8px;font-weight:700;align-self:flex-start}
+.viewToggle{display:flex;gap:6px;margin:8px 0}
+.viewToggle button{border:1.5px solid var(--accent);background:transparent;color:var(--accent-dark);border-radius:8px;padding:6px 12px;font-size:.85rem;font-weight:600;cursor:pointer}
+.viewToggle button.active{background:var(--accent);color:#fff}
+.pager{display:flex;align-items:center;gap:10px;margin:10px 0;flex-wrap:wrap}
+.pager button{border:1.5px solid var(--accent);background:transparent;color:var(--accent-dark);border-radius:8px;padding:6px 14px;font-size:.85rem;font-weight:600;cursor:pointer}
+.pager button:disabled{opacity:.4;cursor:default}
+.pager .pageinfo{font-size:.85rem;color:var(--muted)}
+.rlist{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.rlist .rrow{border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;align-items:center;gap:12px;padding:10px 12px}
+.rlist .rrow .remoji{font-size:32px;flex:none;width:44px;text-align:center}
+.rlist .rrow .rinfo{flex:1;min-width:0}
+.rlist .rrow .rinfo details{font-size:.82rem;color:var(--muted);margin-top:4px}
+.rlist .rrow .btn{flex:none;padding:7px 12px;font-size:.85rem;margin-top:0}
 #scanVideo{max-width:340px;border-radius:12px;overflow:hidden;margin-top:8px}
 .rcard img.photo{width:100%;height:120px;object-fit:cover}
 .docq{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--card)}
@@ -261,7 +274,9 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
   <div class="card">
     <h2>Suggested Meals &amp; Recipes</h2>
     <p id="recipeHint" style="font-size:.88rem;color:var(--muted)"></p>
+    <div id="recipeControlsTop"></div>
     <div class="rgrid" id="recipeGrid"></div>
+    <div id="recipeControlsBottom"></div>
     <div class="note" style="margin-top:12px">Every recipe hits the 25–38 g protein-per-meal target from your plan. "Log this meal" adds it straight to today's meal log.</div>
   </div>
   <div class="card">
@@ -1060,6 +1075,25 @@ const RECIPES = [
 function recipeMatches(r){
   return S.pantry.filter(x=>r.ing.some(i=>i.includes(x)||x.includes(i))).length;
 }
+let recipeView = "grid";
+let recipePage = 1;
+const RECIPES_PER_PAGE = 6;
+function setRecipeView(v){ recipeView = v; recipePage = 1; renderRecipes(); }
+function setRecipePage(p){ recipePage = p; renderRecipes(); document.getElementById("recipeControlsTop").scrollIntoView({behavior:"smooth", block:"start"}); }
+function viewToggleHtml(){
+  return '<div class="viewToggle">'+
+    '<button class="'+(recipeView==="grid"?"active":"")+'" onclick="setRecipeView(\'grid\')">▦ Grid</button>'+
+    '<button class="'+(recipeView==="list"?"active":"")+'" onclick="setRecipeView(\'list\')">☰ List</button>'+
+    '</div>';
+}
+function pagerHtml(totalPages){
+  if (totalPages<=1) return "";
+  return '<div class="pager">'+
+    '<button '+(recipePage<=1?"disabled":"")+' onclick="setRecipePage('+(recipePage-1)+')">‹ Prev</button>'+
+    '<span class="pageinfo">Page '+recipePage+' of '+totalPages+'</span>'+
+    '<button '+(recipePage>=totalPages?"disabled":"")+' onclick="setRecipePage('+(recipePage+1)+')">Next ›</button>'+
+    '</div>';
+}
 function renderRecipes(){
   document.getElementById("pantryChips").innerHTML = S.pantry.length ?
     S.pantry.map((p,i)=>'<span class="chip">'+esc(p)+' <b style="cursor:pointer" onclick="delPantry('+i+')">✕</b></span>').join("") :
@@ -1071,12 +1105,31 @@ function renderRecipes(){
   } else {
     document.getElementById("recipeHint").textContent = "Add ingredients above to sort these by what's in your kitchen.";
   }
-  document.getElementById("recipeGrid").innerHTML = list.map(({r,i,m})=>
-    '<div class="rcard"><div class="rimg">'+r.e+'</div><div class="rbody"><b>'+r.n+'</b>'+
-    '<span class="rmeta">'+r.p+' g protein · ≈'+r.c+' cal</span>'+
-    (m ? '<span class="match">✓ uses '+m+' of your ingredients</span>' : "")+
-    '<details><summary>Ingredients &amp; how-to</summary><p style="margin:6px 0"><b>Needs:</b> '+r.ing.join(", ")+'</p><p>'+r.how+'</p></details>'+
-    '<button class="btn" onclick="logRecipe('+i+')">Log this meal</button></div></div>').join("");
+  const totalPages = Math.max(1, Math.ceil(list.length/RECIPES_PER_PAGE));
+  if (recipePage>totalPages) recipePage = totalPages;
+  if (recipePage<1) recipePage = 1;
+  const pageItems = list.slice((recipePage-1)*RECIPES_PER_PAGE, recipePage*RECIPES_PER_PAGE);
+  const controls = viewToggleHtml()+pagerHtml(totalPages);
+  document.getElementById("recipeControlsTop").innerHTML = controls;
+  document.getElementById("recipeControlsBottom").innerHTML = pagerHtml(totalPages);
+  const grid = document.getElementById("recipeGrid");
+  if (recipeView==="list"){
+    grid.className = "rlist";
+    grid.innerHTML = pageItems.map(({r,i,m})=>
+      '<div class="rrow"><div class="remoji">'+r.e+'</div><div class="rinfo"><b>'+r.n+'</b><br>'+
+      '<span class="rmeta">'+r.p+' g protein · ≈'+r.c+' cal</span>'+
+      (m ? ' <span class="match">✓ uses '+m+'</span>' : "")+
+      '<details><summary>Ingredients &amp; how-to</summary><p style="margin:6px 0"><b>Needs:</b> '+r.ing.join(", ")+'</p><p>'+r.how+'</p></details></div>'+
+      '<button class="btn" onclick="logRecipe('+i+')">Log</button></div>').join("");
+  } else {
+    grid.className = "rgrid";
+    grid.innerHTML = pageItems.map(({r,i,m})=>
+      '<div class="rcard"><div class="rimg">'+r.e+'</div><div class="rbody"><b>'+r.n+'</b>'+
+      '<span class="rmeta">'+r.p+' g protein · ≈'+r.c+' cal</span>'+
+      (m ? '<span class="match">✓ uses '+m+' of your ingredients</span>' : "")+
+      '<details><summary>Ingredients &amp; how-to</summary><p style="margin:6px 0"><b>Needs:</b> '+r.ing.join(", ")+'</p><p>'+r.how+'</p></details>'+
+      '<button class="btn" onclick="logRecipe('+i+')">Log this meal</button></div></div>').join("");
+  }
 }
 function addPantry(){
   const v = (document.getElementById("pantryInput").value||"").trim().toLowerCase();
