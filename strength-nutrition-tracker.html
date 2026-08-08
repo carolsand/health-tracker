@@ -1425,7 +1425,7 @@ function setupCanvas(id){
   const r = window.devicePixelRatio||1;
   c.width = cssW*r; c.height = cssH*r; c.style.height = cssH+"px";
   const ctx = c.getContext("2d");
-  ctx.scale(r,r);
+  ctx.setTransform(r,0,0,r,0,0); // absolute scale, not ctx.scale() -- WebKit doesn't always reset the transform on same-value width/height reassignment, which made scale(r,r) compound each redraw
   ctx.clearRect(0,0,cssW,cssH);
   return {ctx, W:cssW, H:cssH};
 }
