@@ -92,6 +92,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 .login-card h1{font-size:1.3rem;color:var(--accent-dark);margin-bottom:4px}
 .login-card .sub{font-size:.9rem;color:var(--muted);margin-bottom:16px}
 .login-card label{margin-top:12px}
+.login-card a{color:var(--accent-dark);font-weight:600}
 @media(max-width:600px){nav button{padding:9px 11px;font-size:.9rem}}
 @media(max-width:480px){
   header h1{min-width:180px;font-size:1.15rem}
@@ -111,13 +112,24 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <div id="loginScreen" class="login-screen" style="display:none">
   <div class="login-card">
     <h1>Carol's Strength + Nutrition Tracker</h1>
-    <p class="sub">Sign in to view your data.</p>
+    <p class="sub" id="authSub">Sign in to view your data.</p>
     <form id="loginForm">
       <label>Username<input type="text" id="loginUsername" autocomplete="username" required></label>
       <label>Password<input type="password" id="loginPassword" autocomplete="current-password" required></label>
       <button class="btn" type="submit" style="width:100%">Log in</button>
       <p id="loginError" class="warnnote" style="display:none;margin-top:12px"></p>
     </form>
+    <form id="signupForm" style="display:none">
+      <label>Username<input type="text" id="signupUsername" autocomplete="username" required></label>
+      <label>Password<input type="password" id="signupPassword" autocomplete="new-password" minlength="8" required></label>
+      <label>Confirm password<input type="password" id="signupPasswordConfirm" autocomplete="new-password" minlength="8" required></label>
+      <label>Invite code<input type="text" id="signupInviteCode" required></label>
+      <button class="btn" type="submit" style="width:100%">Create account</button>
+      <p id="signupError" class="warnnote" style="display:none;margin-top:12px"></p>
+    </form>
+    <p style="margin-top:14px;font-size:.85rem;text-align:center">
+      <a href="#" id="toggleAuthMode">Need an account? Sign up</a>
+    </p>
   </div>
 </div>
 
@@ -325,6 +337,8 @@ This tracker is a personal organizing tool, not medical advice. Review your exer
 "use strict";
 /* ---------- State & storage ---------- */
 const KEY = "carolStrengthTracker_v1";
+const LAST_USER_KEY = "carolStrengthTracker_lastUser";
+function currentCacheKey(){ return KEY + ":" + (localStorage.getItem(LAST_USER_KEY) || "anon"); }
 const DEFAULT_STATE = {
   profile: { age: 61, heightIn: 64, startWeight: null, activity: 1.375, startDate: null },
   weights: [],        // {date, lbs}
@@ -337,11 +351,11 @@ const DEFAULT_STATE = {
 };
 let S = loadState();
 function loadState(){
-  try { const raw = localStorage.getItem(KEY); if (raw) return Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), JSON.parse(raw)); }
+  try { const raw = localStorage.getItem(currentCacheKey()); if (raw) return Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), JSON.parse(raw)); }
   catch(e){}
   return JSON.parse(JSON.stringify(DEFAULT_STATE));
 }
-function cacheLocally(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function cacheLocally(){ try { localStorage.setItem(currentCacheKey(), JSON.stringify(S)); } catch(e){} }
 
 /* ---------- Server sync ---------- */
 let syncTimer = null;
@@ -375,6 +389,7 @@ function showApp(){
 }
 async function logout(){
   try { await fetch("/api/logout", { method:"POST" }); } catch(e){}
+  try { localStorage.removeItem(currentCacheKey()); localStorage.removeItem(LAST_USER_KEY); } catch(e){}
   showLogin();
 }
 document.getElementById("loginForm").addEventListener("submit", async (e)=>{
@@ -387,7 +402,49 @@ document.getElementById("loginForm").addEventListener("submit", async (e)=>{
     const r = await fetch("/api/login", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({username, password}) });
     if (!r.ok){ errEl.textContent = "Incorrect username or password."; errEl.style.display = "block"; return; }
     document.getElementById("loginPassword").value = "";
+    try { localStorage.setItem(LAST_USER_KEY, username); } catch(e){}
+    S = loadState();
     showApp();
+    renderAll();
+    refreshFromServer();
+  } catch(e){
+    errEl.textContent = "Could not reach the server. Check your connection and try again.";
+    errEl.style.display = "block";
+  }
+});
+let authMode = "login";
+document.getElementById("toggleAuthMode").addEventListener("click", (e)=>{
+  e.preventDefault();
+  authMode = authMode === "login" ? "signup" : "login";
+  document.getElementById("loginForm").style.display = authMode === "login" ? "block" : "none";
+  document.getElementById("signupForm").style.display = authMode === "signup" ? "block" : "none";
+  document.getElementById("authSub").textContent = authMode === "login" ? "Sign in to view your data." : "Create an account to get started.";
+  document.getElementById("toggleAuthMode").textContent = authMode === "login" ? "Need an account? Sign up" : "Already have an account? Log in";
+});
+document.getElementById("signupForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const username = document.getElementById("signupUsername").value.trim();
+  const password = document.getElementById("signupPassword").value;
+  const confirmPassword = document.getElementById("signupPasswordConfirm").value;
+  const inviteCode = document.getElementById("signupInviteCode").value;
+  const errEl = document.getElementById("signupError");
+  errEl.style.display = "none";
+  if (password !== confirmPassword){
+    errEl.textContent = "Passwords don't match.";
+    errEl.style.display = "block";
+    return;
+  }
+  try {
+    const r = await fetch("/api/signup", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({username, password, inviteCode}) });
+    const data = await r.json().catch(()=>({}));
+    if (!r.ok){ errEl.textContent = data.error || "Could not create account."; errEl.style.display = "block"; return; }
+    document.getElementById("signupPassword").value = "";
+    document.getElementById("signupPasswordConfirm").value = "";
+    document.getElementById("signupInviteCode").value = "";
+    try { localStorage.setItem(LAST_USER_KEY, username); } catch(e){}
+    S = loadState();
+    showApp();
+    renderAll();
     refreshFromServer();
   } catch(e){
     errEl.textContent = "Could not reach the server. Check your connection and try again.";
