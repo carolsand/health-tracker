@@ -6,8 +6,8 @@
 <title>Carol's Strength + Nutrition Tracker</title>
 <style>
 :root{
-  --accent:#0e7c7b; --accent-dark:#0a5c5b; --accent-light:#e3f2f1;
-  --plum:#7b4b94; --plum-light:#f0e8f5;
+  --accent:#4f46e5; --accent-dark:#3730a3; --accent-light:#eef0fd;
+  --plum:#96751a; --plum-light:#f7f0dc;
   --bg:#faf9f6; --card:#ffffff; --ink:#2b2b2b; --muted:#6b6b6b;
   --line:#e6e2da; --good:#2e7d32; --warn:#c62828; --gold:#c9a227;
 }
@@ -1064,9 +1064,9 @@ function drawWeightChart(){
   for(let g=0;g<=4;g++){ const v=lo+(hi-lo)*g/4, yy=y(v);
     ctx.beginPath(); ctx.moveTo(pad.l,yy); ctx.lineTo(W-pad.r,yy); ctx.stroke();
     ctx.fillText(v.toFixed(1), pad.l-6, yy+4); }
-  ctx.strokeStyle="#0e7c7b"; ctx.lineWidth=2.5; ctx.beginPath();
+  ctx.strokeStyle="#4f46e5"; ctx.lineWidth=2.5; ctx.beginPath();
   ws.forEach((w,i)=>{ i?ctx.lineTo(x(i),y(w.lbs)):ctx.moveTo(x(i),y(w.lbs)); }); ctx.stroke();
-  ctx.fillStyle="#0e7c7b";
+  ctx.fillStyle="#4f46e5";
   ws.forEach((w,i)=>{ ctx.beginPath(); ctx.arc(x(i),y(w.lbs),4,0,7); ctx.fill(); });
   ctx.fillStyle="#888"; ctx.textAlign="center";
   ctx.fillText(fmtDate(ws[0].date), x(0)+14, H-8);
@@ -1106,13 +1106,13 @@ function drawBarsChart(id, days, series, targetLine, emptyText){
 function drawProteinChart(){
   const days = last14();
   const vals = days.map(d=>S.meals.filter(m=>m.date===d).reduce((a,m)=>a+(+m.protein||0),0));
-  drawBarsChart("chartProtein", days, [{name:"Protein (g)", values:vals, color:"#0e7c7b"}], proteinRange()[0], "Log meals to see your daily protein here");
+  drawBarsChart("chartProtein", days, [{name:"Protein (g)", values:vals, color:"#4f46e5"}], proteinRange()[0], "Log meals to see your daily protein here");
 }
 function drawCalsChart(){
   const days = last14();
   const eaten = days.map(d=>S.meals.filter(m=>m.date===d).reduce((a,m)=>a+(+m.cals||0),0));
   const burned = days.map(d=>S.activities.filter(a=>a.date===d).reduce((a,x)=>a+x.kcal,0));
-  drawBarsChart("chartCals", days, [{name:"Eaten",values:eaten,color:"#7b4b94"},{name:"Burned (exercise)",values:burned,color:"#0e7c7b"}], null, "Log meals and activities to compare calories in vs. out");
+  drawBarsChart("chartCals", days, [{name:"Eaten",values:eaten,color:"#96751a"},{name:"Burned (exercise)",values:burned,color:"#4f46e5"}], null, "Log meals and activities to compare calories in vs. out");
 }
 function drawWorkoutsChart(){
   const n = Math.min(totalWeeks(), Math.max(currentWeek(),8));
@@ -1127,7 +1127,7 @@ function drawWorkoutsChart(){
   for(let g=0;g<=4;g++){ const v=hi*g/4, yy=y(v); ctx.beginPath(); ctx.moveTo(pad.l,yy); ctx.lineTo(W-pad.r,yy); ctx.stroke(); ctx.fillText(Math.round(v),pad.l-6,yy+4); }
   const slot=(W-pad.l-pad.r)/n;
   vals.forEach((v,i)=>{
-    ctx.fillStyle = (i+1===currentWeek()) ? "#c9a227" : "#0e7c7b";
+    ctx.fillStyle = (i+1===currentWeek()) ? "#c9a227" : "#4f46e5";
     if (v>0) ctx.fillRect(pad.l+slot*i+slot*0.2, y(v), slot*0.6, (H-pad.b)-y(v));
     ctx.fillStyle="#888"; ctx.textAlign="center";
     if (n<=16 || i%2===0) ctx.fillText(labels[i], pad.l+slot*i+slot/2, H-8);
