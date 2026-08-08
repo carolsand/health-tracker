@@ -36,10 +36,24 @@ Most habit trackers either need an account, a subscription, or send your health 
   <img src="assets/feature-map.svg" alt="Diagram of the app's seven tabs — Home, Exercise, Meals, Recipes, Calculators, Progress, and Doctor Visit — all reading and writing the same local data" width="90%">
 </p>
 
-## What the dashboard looks like
+## Screenshots
+
+**Home** — today's plan, weekly completion, and stat tiles:
 
 <p align="center">
-  <img src="assets/dashboard-mock.svg" alt="Mockup of the Home tab showing this week's plan, protein/calorie/weight stat tiles, today's rhythm, and a weight trend chart" width="90%">
+  <img src="assets/screenshot-dashboard.png" alt="Screenshot of the Home tab showing this week's plan, protein/calorie/weight stat tiles, and today's rhythm" width="90%">
+</p>
+
+**Progress** — weight trend and daily protein charts:
+
+<p align="center">
+  <img src="assets/screenshot-progress.png" alt="Screenshot of the Progress tab showing a weight trend line chart and a daily protein bar chart" width="90%">
+</p>
+
+**Exercise** — the week-by-week strength plan:
+
+<p align="center">
+  <img src="assets/screenshot-exercise.png" alt="Screenshot of the Exercise tab showing weekly session checklists and exercise detail" width="90%">
 </p>
 
 ---
