@@ -15,6 +15,7 @@
 body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);font-size:17px;line-height:1.5}
 header{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:#fff;padding:18px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
 header h1{font-size:1.35rem;font-weight:600;flex:1;min-width:240px}
+header .hdr-user{font-size:.85rem;opacity:.95;font-weight:600;width:100%}
 header .sub{font-size:.85rem;opacity:.9;width:100%}
 .hdr-btns{display:flex;gap:8px}
 .hdr-btns button{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.45);color:#fff;border-radius:8px;padding:7px 14px;font-size:.85rem;cursor:pointer}
@@ -190,6 +191,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
     <button onclick="logout()">Log out</button>
   </div>
+  <div class="hdr-user" id="hdrUser"></div>
   <div class="sub" id="hdrSub"></div>
 </header>
 
@@ -554,9 +556,8 @@ async function loadSessionInfo(){
     document.getElementById("navAdminBtn").style.display = isAdmin ? "" : "none";
     if (isAdmin) renderAdmin();
     if (data.username){
-      const title = data.username + "’s Activity + Nutrition Tracker";
-      document.getElementById("appTitle").textContent = title;
-      document.title = title;
+      document.getElementById("hdrUser").textContent = "Logged in as " + data.username;
+      document.title = data.username + "’s Activity + Nutrition Tracker";
     }
   } catch(e){ /* offline — leave title/admin tab as-is */ }
 }
