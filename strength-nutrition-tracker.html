@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carol's Strength + Nutrition Tracker</title>
+<style>
+:root{
+  --accent:#0e7c7b; --accent-dark:#0a5c5b; --accent-light:#e3f2f1;
+  --plum:#7b4b94; --plum-light:#f0e8f5;
+  --bg:#faf9f6; --card:#ffffff; --ink:#2b2b2b; --muted:#6b6b6b;
+  --line:#e6e2da; --good:#2e7d32; --warn:#c62828; --gold:#c9a227;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);font-size:17px;line-height:1.5}
+header{background:linear-gradient(135deg,var(--accent-dark),var(--accent));color:#fff;padding:18px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+header h1{font-size:1.35rem;font-weight:600;flex:1;min-width:240px}
+header .sub{font-size:.85rem;opacity:.9;width:100%}
+.hdr-btns{display:flex;gap:8px}
+.hdr-btns button{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.45);color:#fff;border-radius:8px;padding:7px 14px;font-size:.85rem;cursor:pointer}
+.hdr-btns button:hover{background:rgba(255,255,255,.3)}
+nav{display:flex;flex-wrap:wrap;gap:4px;padding:10px 14px;background:var(--card);border-bottom:2px solid var(--line);position:sticky;top:0;z-index:10}
+nav button{border:none;background:transparent;padding:10px 16px;font-size:1rem;border-radius:10px;cursor:pointer;color:var(--muted);font-weight:600}
+nav button.active{background:var(--accent);color:#fff}
+nav button:hover:not(.active){background:var(--accent-light);color:var(--accent-dark)}
+main{max-width:960px;margin:0 auto;padding:18px 14px 60px}
+section.tab{display:none}
+section.tab.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card h2{font-size:1.15rem;color:var(--accent-dark);margin-bottom:10px}
+.card h3{font-size:1rem;margin:12px 0 6px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.statrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:8px}
+.stat{background:var(--accent-light);border-radius:12px;padding:12px;text-align:center}
+.stat .big{font-size:1.5rem;font-weight:700;color:var(--accent-dark)}
+.stat .lbl{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+label{display:block;font-size:.85rem;font-weight:600;color:var(--muted);margin:8px 0 3px}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:1rem;font-family:inherit;background:#fff;color:var(--ink)}
+textarea{min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+button.btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:10px 18px;font-size:.95rem;font-weight:600;cursor:pointer;margin-top:10px}
+button.btn:hover{background:var(--accent-dark)}
+button.btn.secondary{background:var(--plum)}
+button.btn.ghost{background:transparent;color:var(--accent-dark);border:1.5px solid var(--accent)}
+button.del{background:none;border:none;color:var(--warn);font-size:1.05rem;cursor:pointer;padding:4px 8px}
+table{width:100%;border-collapse:collapse;font-size:.92rem;margin:8px 0}
+th{text-align:left;color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;padding:6px 8px;border-bottom:2px solid var(--line)}
+td{padding:7px 8px;border-bottom:1px solid var(--line)}
+.chip{display:inline-block;background:var(--plum-light);color:var(--plum);border:1px solid var(--plum);border-radius:20px;padding:5px 12px;font-size:.83rem;margin:3px;cursor:pointer;font-weight:600}
+.chip:hover{background:var(--plum);color:#fff}
+.bar-outer{background:var(--line);border-radius:10px;height:20px;overflow:hidden;margin:6px 0}
+.bar-inner{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-dark));border-radius:10px;transition:width .4s;min-width:2%}
+.bar-inner.gold{background:linear-gradient(90deg,var(--gold),#a3831c)}
+details.week{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:var(--card)}
+details.week summary{padding:13px 16px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:10px;list-style:none}
+details.week summary::-webkit-details-marker{display:none}
+details.week[open] summary{border-bottom:1px solid var(--line)}
+.wk-body{padding:12px 16px}
+.badge{font-size:.72rem;background:var(--accent-light);color:var(--accent-dark);border-radius:12px;padding:3px 10px;font-weight:700}
+.badge.p2{background:var(--plum-light);color:var(--plum)}
+.badge.p3{background:#fdf3d7;color:#8a6d00}
+.badge.pm{background:#e8e8e8;color:#555}
+.pct{margin-left:auto;font-size:.85rem;color:var(--muted)}
+.checkitem{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px dashed var(--line)}
+.checkitem input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none;cursor:pointer}
+.checkitem.done span.t{text-decoration:line-through;color:var(--muted)}
+.exlist{font-size:.88rem;color:var(--muted);margin:4px 0 10px 8px}
+.exlist li{margin-left:16px;margin-bottom:2px}
+canvas{width:100%;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:10px}
+.note{font-size:.85rem;color:var(--muted);background:var(--accent-light);border-left:4px solid var(--accent);padding:10px 12px;border-radius:6px;margin:10px 0}
+.warnnote{font-size:.85rem;color:#7a4a00;background:#fdf3d7;border-left:4px solid var(--gold);padding:10px 12px;border-radius:6px;margin:10px 0}
+footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--muted);text-align:center}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:12px;margin-top:10px}
+.rcard{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+.rimg{height:96px;display:flex;align-items:center;justify-content:center;font-size:52px;background:linear-gradient(135deg,var(--accent-light),var(--plum-light))}
+.rbody{padding:10px 12px;font-size:.88rem;flex:1;display:flex;flex-direction:column;gap:6px}
+.rmeta{font-size:.8rem;color:var(--accent-dark);font-weight:700}
+.rcard details{font-size:.82rem;color:var(--muted)}
+.rcard details summary{cursor:pointer;font-weight:600}
+.rcard .btn{margin-top:auto;padding:7px 12px;font-size:.85rem}
+.match{font-size:.75rem;background:#fdf3d7;color:#8a6d00;border-radius:10px;padding:2px 8px;font-weight:700;align-self:flex-start}
+#scanVideo{max-width:340px;border-radius:12px;overflow:hidden;margin-top:8px}
+.rcard img.photo{width:100%;height:120px;object-fit:cover}
+.docq{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--card)}
+.docq .q{font-weight:600;margin-bottom:8px}
+.docq textarea{background:#fcfbf7}
+.flexrow{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.flexrow>div{flex:1;min-width:120px}
+.result-big{font-size:1.35rem;font-weight:700;color:var(--accent-dark);margin:6px 0}
+@media(max-width:600px){nav button{padding:9px 11px;font-size:.9rem}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Carol's Strength + Nutrition Tracker</h1>
+  <div class="hdr-btns">
+    <button onclick="exportData()">⬇ Backup</button>
+    <button onclick="document.getElementById('importFile').click()">⬆ Restore</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+  <div class="sub" id="hdrSub"></div>
+</header>
+
+<nav id="tabs">
+  <button data-tab="dashboard" class="active">Home</button>
+  <button data-tab="exercise">Exercise</button>
+  <button data-tab="meals">Meals</button>
+  <button data-tab="recipes">Recipes</button>
+  <button data-tab="calc">Calculators</button>
+  <button data-tab="progress">Progress</button>
+  <button data-tab="doctor">Doctor Visit</button>
+</nav>
+
+<main>
+<!-- ============ DASHBOARD ============ -->
+<section class="tab active" id="tab-dashboard">
+  <div class="card" id="setupCard" style="display:none">
+    <h2>Welcome! Let's set up your plan</h2>
+    <p style="font-size:.92rem;color:var(--muted)">Enter your details once — everything else calculates automatically. You can change these anytime in Calculators.</p>
+    <div class="flexrow">
+      <div><label>Plan start date</label><input type="date" id="setupStart"></div>
+      <div><label>Current weight (lb)</label><input type="number" id="setupWeight" min="80" max="400" step="0.1"></div>
+      <div><label>Height (inches)</label><input type="number" id="setupHeight" min="48" max="80" value="64"></div>
+      <div><label>Age</label><input type="number" id="setupAge" min="18" max="100" value="61"></div>
+    </div>
+    <button class="btn" onclick="finishSetup()">Start my plan</button>
+  </div>
+  <div id="dashContent"></div>
+</section>
+
+<!-- ============ EXERCISE ============ -->
+<section class="tab" id="tab-exercise">
+  <div class="card">
+    <h2>Your Week-by-Week Plan</h2>
+    <p style="font-size:.9rem;color:var(--muted)">Check off each session as you complete it. Weeks keep going past week 8 — the plan extends automatically, and you can add more with the button at the bottom.</p>
+    <div class="note"><b>Progressive overload rule:</b> when all rounds and reps feel easy with good form, increase the weight at your next session. Your equipment: Rogue rack &amp; barbell, dumbbells, kettlebells, leg machine, stationary bike, 12-lb med ball, bands, foam rollers.</div>
+    <div class="warnnote"><b>🦵 Knee-recovery rules (apply to every session):</b> warm up on the bike first · work only in a pain-free range · box squats limit your depth — use them · skip leg extensions for now · never foam-roll the knee joint itself · mild muscle soreness is fine, sharp or swelling-type knee pain means stop. Have your doctor or physical therapist confirm this plan fits your specific injury.</div>
+  </div>
+  <div id="weeksList"></div>
+  <button class="btn ghost" onclick="addWeek()">＋ Add another week</button>
+</section>
+
+<!-- ============ MEALS ============ -->
+<section class="tab" id="tab-meals">
+  <div class="card">
+    <h2>Meal &amp; Protein Log</h2>
+    <div class="flexrow">
+      <div><label>Date</label><input type="date" id="mealDate"></div>
+    </div>
+    <div id="proteinSummary"></div>
+    <h3>Add a meal or snack</h3>
+    <div class="flexrow">
+      <div style="flex:2"><label>What did you eat?</label><input type="text" id="mealName" placeholder="e.g., Greek yogurt with berries"></div>
+      <div><label>Protein (g)</label><input type="number" id="mealProtein" min="0" max="200" step="1"></div>
+      <div><label>Calories</label><input type="number" id="mealCals" min="0" max="3000" step="5"></div>
+      <div><button class="btn" onclick="addMeal()">Add</button></div>
+    </div>
+    <h3>Quick add (tap a food)</h3>
+    <div id="foodChips"></div>
+    <h3>📷 Scan a packaged food (barcode)</h3>
+    <p style="font-size:.85rem;color:var(--muted)">Uses your camera and the free Open Food Facts database — needs internet. No camera? Type the number printed under the bars.</p>
+    <div class="flexrow">
+      <div style="flex:2"><label>Barcode number</label><input type="text" id="barcodeInput" inputmode="numeric" placeholder="e.g., 016000275270"></div>
+      <div><button class="btn secondary" onclick="toggleScan()">📷 Scan with camera</button></div>
+      <div><button class="btn" onclick="lookupBarcode()">Look up</button></div>
+    </div>
+    <div id="scanBox" style="display:none"><div id="scanVideo"></div><button class="btn ghost" onclick="stopScan()">Stop camera</button></div>
+    <div id="barcodeResult"></div>
+    <div id="mealList"></div>
+  </div>
+  <div class="card">
+    <h2>Protein Quick-Reference</h2>
+    <table><thead><tr><th>Food</th><th>Portion</th><th>Protein</th><th>Calories</th></tr></thead><tbody id="foodTable"></tbody></table>
+    <div class="note">Target: <b>25–35 g protein per meal</b>, 3–4 meals a day. Spreading protein through the day matters as much as the total.</div>
+  </div>
+</section>
+
+<!-- ============ RECIPES ============ -->
+<section class="tab" id="tab-recipes">
+  <div class="card">
+    <h2>What's in your kitchen?</h2>
+    <p style="font-size:.9rem;color:var(--muted)">Add ingredients you have on hand (one at a time, or comma-separated). The suggested meals below re-sort to match what you've got.</p>
+    <div class="flexrow">
+      <div style="flex:3"><label>Ingredient</label><input type="text" id="pantryInput" placeholder="e.g., chicken breast, broccoli, quinoa"></div>
+      <div><button class="btn" onclick="addPantry()">Add</button></div>
+    </div>
+    <div id="pantryChips" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <h2>Suggested Meals &amp; Recipes</h2>
+    <p id="recipeHint" style="font-size:.88rem;color:var(--muted)"></p>
+    <div class="rgrid" id="recipeGrid"></div>
+    <div class="note" style="margin-top:12px">Every recipe hits the 25–38 g protein-per-meal target from your plan. "Log this meal" adds it straight to today's meal log.</div>
+  </div>
+  <div class="card">
+    <h2>More ideas from the web 🌐</h2>
+    <p style="font-size:.88rem;color:var(--muted)">Searches TheMealDB with up to three of your ingredients — real photos and full recipes (needs internet). Nutrition isn't included, so log those meals manually.</p>
+    <button class="btn secondary" onclick="findOnlineIdeas()">Find online recipes</button>
+    <div class="rgrid" id="onlineIdeas"></div>
+  </div>
+</section>
+
+<!-- ============ CALCULATORS ============ -->
+<section class="tab" id="tab-calc">
+  <div class="card">
+    <h2>Your Numbers</h2>
+    <div class="flexrow">
+      <div><label>Age</label><input type="number" id="cAge" min="18" max="100"></div>
+      <div><label>Height (in)</label><input type="number" id="cHeight" min="48" max="80"></div>
+      <div><label>Weight (lb)</label><input type="number" id="cWeight" min="80" max="400" step="0.1"></div>
+      <div><label>Activity level</label>
+        <select id="cActivity">
+          <option value="1.2">Mostly sitting</option>
+          <option value="1.375" selected>Light (this plan, weeks 1–2)</option>
+          <option value="1.55">Moderate (this plan, weeks 3+)</option>
+          <option value="1.725">Very active</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" onclick="calcEnergy()">Calculate</button>
+    <div id="energyResults"></div>
+  </div>
+  <div class="card">
+    <h2>Calories Burned Calculator</h2>
+    <p style="font-size:.9rem;color:var(--muted)">Pick an activity and minutes — uses your current weight and standard MET values.</p>
+    <div class="flexrow">
+      <div style="flex:2"><label>Activity</label><select id="burnActivity"></select></div>
+      <div><label>Minutes</label><input type="number" id="burnMin" min="1" max="600" value="30"></div>
+      <div><label>Date</label><input type="date" id="burnDate"></div>
+    </div>
+    <button class="btn" onclick="calcBurn(false)">Calculate</button>
+    <button class="btn secondary" onclick="calcBurn(true)">Calculate &amp; log it</button>
+    <div id="burnResult"></div>
+    <div id="activityLog"></div>
+  </div>
+</section>
+
+<!-- ============ PROGRESS ============ -->
+<section class="tab" id="tab-progress">
+  <div class="card">
+    <h2>Weight Tracking</h2>
+    <div class="flexrow">
+      <div><label>Date</label><input type="date" id="wtDate"></div>
+      <div><label>Weight (lb)</label><input type="number" id="wtVal" min="80" max="400" step="0.1"></div>
+      <div><button class="btn" onclick="addWeight()">Log weight</button></div>
+    </div>
+    <div class="note">Weigh in once or twice a week, same time of day. Daily fluctuations of 1–3 lb are normal water shifts — the trend line is what counts.</div>
+    <div id="wtStats"></div>
+    <canvas id="chartWeight" height="220"></canvas>
+    <div id="wtList"></div>
+  </div>
+  <div class="card">
+    <h2>Daily Protein — Last 14 Days</h2>
+    <canvas id="chartProtein" height="200"></canvas>
+  </div>
+  <div class="card">
+    <h2>Calories In vs. Burned — Last 14 Days</h2>
+    <p style="font-size:.85rem;color:var(--muted)">"Burned" here shows exercise calories you logged. Your body also burns your baseline (TDEE) every day — see Calculators.</p>
+    <canvas id="chartCals" height="200"></canvas>
+  </div>
+  <div class="card">
+    <h2>Workouts Completed Per Week</h2>
+    <canvas id="chartWorkouts" height="200"></canvas>
+  </div>
+</section>
+
+<!-- ============ DOCTOR ============ -->
+<section class="tab" id="tab-doctor">
+  <div class="card">
+    <h2>Questions for Your Doctor</h2>
+    <p style="font-size:.9rem;color:var(--muted)">Bring this list to your appointment. Type your doctor's answers in the boxes — they save automatically.</p>
+    <div class="flexrow">
+      <div><label>Appointment date</label><input type="date" id="apptDate" onchange="saveAppt()"></div>
+    </div>
+  </div>
+  <div id="docQuestions"></div>
+  <div class="card">
+    <h3>Add your own question</h3>
+    <div class="flexrow">
+      <div style="flex:3"><input type="text" id="newDocQ" placeholder="Type a question to ask..."></div>
+      <div><button class="btn" onclick="addDocQ()">Add question</button></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+This tracker is a personal organizing tool, not medical advice. Review your exercise, nutrition, and medication plans with your doctor — especially given your estradiol therapy and any other conditions or medications.
+</footer>
+
+<script>
+"use strict";
+/* ---------- State & storage ---------- */
+const KEY = "carolStrengthTracker_v1";
+const DEFAULT_STATE = {
+  profile: { age: 61, heightIn: 64, startWeight: null, activity: 1.375, startDate: null },
+  weights: [],        // {date, lbs}
+  meals: [],          // {date, name, protein, cals}
+  activities: [],     // {date, name, min, kcal}
+  checks: {},         // "w3-s1": true
+  pantry: [],         // ingredient strings
+  extraWeeks: 0,
+  doctor: { answers: {}, custom: [], apptDate: "" }
+};
+let S = loadState();
+function loadState(){
+  try { const raw = localStorage.getItem(KEY); if (raw) return Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), JSON.parse(raw)); }
+  catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_STATE));
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function fmtDate(s){ const [y,m,d]=s.split("-"); return m+"/"+d+"/"+y.slice(2); }
+function esc(t){ return String(t).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ---------- Backup / restore ---------- */
+function exportData(){
+  const blob = new Blob([JSON.stringify(S,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "tracker-backup-"+todayStr()+".json";
+  a.click();
+}
+function importData(ev){
+  const f = ev.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { try { S = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), JSON.parse(r.result)); save(); renderAll(); alert("Backup restored!"); } catch(e){ alert("Sorry, that file could not be read."); } };
+  r.readAsText(f);
+}
+
+/* ---------- Plan data ---------- */
+const SESSIONS = {
+  A1:{ title:"Session A — Lower Body + Core", ex:[
+    ["Warm-up: easy stationary bike","8 min, light resistance — the best knee prep there is"],
+    ["Box squat (to a bench/box set in your rack)","10 reps — sit back, only as deep as stays pain-free"],
+    ["Glute bridge (squeeze med ball between knees)","10 reps — hold 2 sec at top"],
+    ["Leg machine: hamstring curl OR leg press","10 reps, light, pain-free range only — skip leg extensions for now (high knee stress)"],
+    ["Side-lying clamshell","10 each side"],
+    ["Dead bug","5 each side — lower back stays flat"],
+    ["Calf raises (hold the rack)","12 reps — slow lowering"],
+    ["Cool-down: foam roll","Quads, hamstrings, calves, glutes 30–60 sec each — never roll directly on the knee joint"]
+  ], rounds:"2 rounds" },
+  B1:{ title:"Session B — Upper Body + Posture", ex:[
+    ["Warm-up: easy bike","5 min"],
+    ["Dumbbell floor or bench press (light)","10 reps"],
+    ["One-arm dumbbell row (hand braced on bench)","10 each side"],
+    ["Seated dumbbell overhead press","10 reps"],
+    ["Band pull-apart","12 reps — squeeze shoulder blades"],
+    ["Med-ball squeeze press","10 reps — press the 12-lb ball hard between your palms at chest height"],
+    ["Plank hold (on knees)","20–30 sec"],
+    ["Cool-down: foam roll upper back","1–2 min, arms crossed"]
+  ], rounds:"2 rounds" },
+  A2:{ title:"Session A — Lower Body + Core", ex:[
+    ["Warm-up: bike","8–10 min, add a little resistance"],
+    ["Kettlebell goblet box squat","10 reps — hold KB at chest, depth stays pain-free"],
+    ["Leg press (machine)","10 reps — moderate weight, stop well short of a deep knee bend"],
+    ["Kettlebell Romanian deadlift","10 reps — hips back, soft knees, feel the hamstrings"],
+    ["Machine hamstring curl","10 reps, light"],
+    ["Step-up to LOW step","8 each side — only if the knee is quiet; otherwise sub glute bridge march"],
+    ["Med-ball dead bug","6 each side — hold the ball above your chest"],
+    ["Calf raises holding dumbbells","12 reps"],
+    ["Cool-down: foam roll legs","skip the knee itself"]
+  ], rounds:"3 rounds" },
+  B2:{ title:"Session B — Upper Body + Posture", ex:[
+    ["Warm-up: easy bike","5 min"],
+    ["Dumbbell bench press","10 reps"],
+    ["Bent-over dumbbell row","10 each side"],
+    ["Seated overhead press (dumbbell or kettlebell)","10 reps"],
+    ["Kettlebell halo","8 circles each direction — slow, ribs down"],
+    ["Band pull-apart","12 reps"],
+    ["Full plank (hands & toes)","20–30 sec"],
+    ["Cool-down: foam roll upper back + lats","1–2 min"]
+  ], rounds:"3 rounds" },
+  T2:{ title:"Technique + Recovery Day — light", ex:[
+    ["Easy bike","15–20 min, conversational pace"],
+    ["1 light round of Sessions A + B","Week-2 weights, slower tempo, focus on form"],
+    ["Full foam-rolling session","~10 min: quads, hamstrings, calves, glutes, upper back — never the knee joint"]
+  ], rounds:"1 round" },
+  A3:{ title:"Session A — Lower Body + Carry", ex:[
+    ["Warm-up: bike","10 min"],
+    ["Barbell box squat in the rack","10–12 reps — empty or light bar, safety pins set, depth pain-free"],
+    ["Leg press","10–12 reps — progress the weight, keep the range comfortable"],
+    ["Romanian deadlift (barbell or heavy kettlebell)","10–12 reps"],
+    ["Hip thrust (upper back on bench, dumbbell or light bar on hips)","10–12 reps"],
+    ["Kettlebell farmer's carry","20 steps × 3 — one KB each hand, tall posture"],
+    ["Machine hamstring curl","12 reps"],
+    ["Cool-down: foam roll legs","skip the knee"]
+  ], rounds:"3 rounds" },
+  B3:{ title:"Session B — Upper Body + Posture", ex:[
+    ["Warm-up: easy bike","5 min"],
+    ["Bench press (dumbbells or light barbell)","10–12 reps"],
+    ["Barbell bent-over row (light) or heavy dumbbell row","10–12 reps"],
+    ["Overhead press (dumbbells, kettlebell, or empty bar)","10–12 reps"],
+    ["Kettlebell halo","8 each direction"],
+    ["Med-ball Russian twist (seated, feet on floor)","10 each side — heels stay down to spare the knee"],
+    ["Band pull-apart","12–15 reps"],
+    ["Plank 40–50 sec + side plank","20 sec each side"]
+  ], rounds:"3 rounds" }
+};
+function weekSpec(w){
+  if (w<=2) return { phase:"Phase 1 · Foundation", cls:"", strength:["A1","B1"], walks:3, walkMin:20, tip:"Learn the movements and protect the knee: bike before every session, pain-free range only, stop at any sharp pain." };
+  if (w<=5) return { phase:"Phase 2 · Load", cls:"p2", strength:["A2","B2","T2"], walks:5, walkMin:30, tip:"Add weight one step at a time when 2 rounds of 10 feel manageable. The knee sets the pace — step-ups and leg press only if pain-free." };
+  if (w<=8) return { phase:"Phase 3 · Build", cls:"p3", strength:["A3","B3","A3"], walks:5, walkMin:30, tip:"3 rounds of 10–12. Barbell work stays light until the knee is fully cleared. When all rounds feel easy, go heavier next session." };
+  return { phase:"Maintenance · Keep Progressing", cls:"pm", strength:["A3","B3","A3"], walks:5, walkMin:30, tip:"Keep the Phase 3 structure and keep nudging the weights up. Once your knee is cleared by your doctor or PT, ask about adding kettlebell swings and deeper squats." };
+}
+function currentWeek(){
+  if (!S.profile.startDate) return 1;
+  const start = new Date(S.profile.startDate+"T00:00:00");
+  const diff = Math.floor((Date.now()-start.getTime())/(7*24*3600*1000))+1;
+  return Math.max(1, diff);
+}
+function totalWeeks(){ return Math.max(8, currentWeek(), 8+S.extraWeeks); }
+
+/* ---------- Foods & METs ---------- */
+const FOODS = [
+  ["Greek yogurt, plain 2% (1 cup)",20,150],["Cottage cheese (1/2 cup)",14,90],
+  ["Eggs (2 large)",12,140],["Chicken breast, cooked (3 oz)",26,140],
+  ["Salmon, cooked (3 oz)",22,175],["Canned tuna (3 oz)",20,100],
+  ["Edamame (1/2 cup)",9,95],["Chickpeas (1/2 cup)",7,135],
+  ["Quinoa, cooked (1/2 cup)",4,110],["Whey/soy protein (1 scoop)",24,120],
+  ["Lean ground turkey (4 oz)",30,170],["2-egg omelet + feta",18,260]
+];
+const METS = [
+  ["Brisk walking (3.5 mph)",4.3],["Very brisk walking (4 mph)",5.0],
+  ["Casual walking",3.0],["Interval walking (brisk/moderate)",5.5],
+  ["Strength training (this plan)",3.5],["Vigorous strength training",6.0],
+  ["Stationary bike, easy (knee recovery)",3.5],["Stationary bike, moderate",6.8],["Swimming, moderate",5.8],
+  ["Water aerobics",5.3],["Yoga",2.5],["Dancing",4.5],["Gardening",3.8]
+];
+function latestWeight(){
+  if (S.weights.length) return S.weights[S.weights.length-1].lbs;
+  return S.profile.startWeight || 150;
+}
+function kg(lbs){ return lbs*0.453592; }
+function proteinRange(){ const k = kg(latestWeight()); return [Math.round(k*1.2), Math.round(k*1.6)]; }
+
+/* ---------- Doctor questions ---------- */
+const DOCQ = [
+  "Given my health history and my estradiol patch (0.1 mg/week transdermal), is a prescription weight-loss medication appropriate for me? Which would you recommend?",
+  "Am I a candidate for phentermine/topiramate (Qsymia)? Any concerns given my blood pressure, heart health, or eye history (glaucoma)?",
+  "Would naltrexone/bupropion (Contrave) fit my eating patterns? Does it interact with anything I take?",
+  "Is the oral GLP-1 pill (orforglipron) available and appropriate for me? Would it cost less than the injectable GLP-1s my insurance won't cover?",
+  "Does my insurance cover any weight-loss medication, or a medically supervised weight-management program?",
+  "Can I get a referral to a registered dietitian, ideally one who works with menopausal women?",
+  "Can we check my vitamin D level? Should I supplement vitamin D and calcium, and at what doses?",
+  "Should I have a bone density (DEXA) scan before or during this strength-training program?",
+  "Is my estradiol dose still right for me? Could sleep disruption or other symptoms be working against my weight loss?",
+  "What is a realistic weight-loss goal and pace for me over the next 6–12 months?",
+  "Are there any exercises in my plan I should modify or avoid?",
+  "For my knee injury: which of these are safe right now — leg press, box squats, step-ups, kettlebell swings? Would a physical therapy referral help my recovery?",
+  "Is it worth rechecking blood work — thyroid (TSH), A1c or fasting glucose, and cholesterol — as part of this effort?"
+];
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll("nav button").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll("section.tab").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    document.getElementById("tab-"+b.dataset.tab).classList.add("active");
+    renderAll();
+  });
+});
+
+/* ---------- Setup ---------- */
+function finishSetup(){
+  const sd = document.getElementById("setupStart").value || todayStr();
+  const w = parseFloat(document.getElementById("setupWeight").value);
+  S.profile.startDate = sd;
+  S.profile.heightIn = parseFloat(document.getElementById("setupHeight").value)||64;
+  S.profile.age = parseInt(document.getElementById("setupAge").value)||61;
+  if (w){ S.profile.startWeight = w; if(!S.weights.length) S.weights.push({date:sd, lbs:w}); }
+  save(); renderAll();
+}
+
+/* ---------- Dashboard ---------- */
+function renderDashboard(){
+  const setup = document.getElementById("setupCard");
+  const dash = document.getElementById("dashContent");
+  if (!S.profile.startDate){
+    setup.style.display = "block";
+    document.getElementById("setupStart").value = todayStr();
+    dash.innerHTML = "";
+    document.getElementById("hdrSub").textContent = "Set up your plan below to get started.";
+    return;
+  }
+  setup.style.display = "none";
+  const wk = currentWeek(), spec = weekSpec(wk);
+  document.getElementById("hdrSub").textContent = "Week "+wk+" · "+spec.phase;
+  const t = todayStr();
+  const todayMeals = S.meals.filter(m=>m.date===t);
+  const prot = todayMeals.reduce((a,m)=>a+(+m.protein||0),0);
+  const cals = todayMeals.reduce((a,m)=>a+(+m.cals||0),0);
+  const [pLo,pHi] = proteinRange();
+  const weekActs = S.activities.filter(a=>weekOf(a.date)===wk);
+  const burned = weekActs.reduce((a,x)=>a+x.kcal,0);
+  const lw = latestWeight();
+  const sw = S.profile.startWeight || lw;
+  const change = (lw-sw);
+  const done = weekProgress(wk);
+  dash.innerHTML =
+    '<div class="card"><h2>This Week — Week '+wk+' <span class="badge '+spec.cls+'">'+spec.phase+'</span></h2>'+
+    '<div class="note">'+spec.tip+'</div>'+
+    '<div class="bar-outer"><div class="bar-inner" style="width:'+done.pct+'%"></div></div>'+
+    '<p style="font-size:.9rem;color:var(--muted)">'+done.done+' of '+done.total+' sessions done this week ('+done.pct+'%)</p>'+
+    '<div class="statrow">'+
+      stat(prot+" g","Protein today (goal "+pLo+"–"+pHi+")")+
+      stat(cals||0,"Calories eaten today")+
+      stat(Math.round(burned),"Exercise cal burned this week")+
+      stat(lw.toFixed(1)+" lb","Current weight "+(change ? "("+(change>0?"+":"")+change.toFixed(1)+")" : ""))+
+    '</div></div>'+
+    '<div class="card"><h2>Today’s Rhythm</h2><p style="font-size:.95rem">'+todayPlanText(wk)+'</p>'+
+    '<p style="font-size:.88rem;color:var(--muted);margin-top:8px">Anchor every meal with 25–35 g protein · '+spec.walks+' walk-or-bike sessions of '+spec.walkMin+' min this week · calcium 1,200 mg/day · check your vitamin D with your doctor.</p></div>';
+}
+function stat(big,lbl){ return '<div class="stat"><div class="big">'+big+'</div><div class="lbl">'+lbl+'</div></div>'; }
+function todayPlanText(wk){
+  const spec = weekSpec(wk);
+  const dow = new Date().getDay(); // 0 Sun
+  const strengthDays = spec.strength.length===2 ? [1,4] : [1,3,5]; // Mon/Thu or Mon/Wed/Fri
+  if (strengthDays.includes(dow)){
+    const i = strengthDays.indexOf(dow);
+    return "💪 Strength day: <b>"+SESSIONS[spec.strength[i]].title+"</b> ("+SESSIONS[spec.strength[i]].rounds+"). Check it off in the Exercise tab when done.";
+  }
+  if (dow===0) return "🌿 Rest and recovery day. Gentle stretching or a leisurely stroll is perfect.";
+  return "🚶 Cardio day: "+spec.walkMin+" minutes of brisk walking or stationary bike (bike is easiest on the knee). Log it in Calculators → Calories Burned to count it.";
+}
+function weekOf(dateStr){
+  if (!S.profile.startDate) return 1;
+  const start = new Date(S.profile.startDate+"T00:00:00");
+  const d = new Date(dateStr+"T00:00:00");
+  return Math.floor((d-start)/(7*24*3600*1000))+1;
+}
+function weekProgress(w){
+  const spec = weekSpec(w);
+  const total = spec.strength.length + spec.walks;
+  let done = 0;
+  for (let i=0;i<spec.strength.length;i++) if (S.checks["w"+w+"-s"+i]) done++;
+  for (let i=0;i<spec.walks;i++) if (S.checks["w"+w+"-c"+i]) done++;
+  return { done, total, pct: Math.round(done/total*100) };
+}
+
+/* ---------- Exercise tab ---------- */
+function renderExercise(){
+  const wrap = document.getElementById("weeksList");
+  const cw = currentWeek(), n = totalWeeks();
+  let html = "";
+  for (let w=1; w<=n; w++){
+    const spec = weekSpec(w), prog = weekProgress(w);
+    const open = (w===Math.min(cw,n)) ? " open" : "";
+    html += '<details class="week"'+open+'><summary>Week '+w+
+      ' <span class="badge '+spec.cls+'">'+spec.phase+'</span><span class="pct">'+prog.done+'/'+prog.total+' ✓</span></summary><div class="wk-body">'+
+      '<p style="font-size:.88rem;color:var(--muted);margin-bottom:8px">'+spec.tip+'</p>';
+    spec.strength.forEach((code,i)=>{
+      const key = "w"+w+"-s"+i, sess = SESSIONS[code], ck = S.checks[key];
+      html += '<div class="checkitem'+(ck?" done":"")+'"><input type="checkbox" '+(ck?"checked":"")+' onchange="toggleCheck(\''+key+'\')"><span class="t"><b>'+sess.title+'</b> · '+sess.rounds+'</span></div>'+
+        '<ul class="exlist">'+sess.ex.map(e=>'<li><b>'+e[0]+'</b> — '+e[1]+'</li>').join("")+'</ul>';
+    });
+    html += '<h3>Cardio — '+spec.walks+' × '+spec.walkMin+' min: brisk walk or stationary bike</h3>'+
+      '<p style="font-size:.82rem;color:var(--muted)">The bike is ideal while your knee recovers — zero impact. Mix and match with walking as the knee allows.</p>';
+    for (let i=0;i<spec.walks;i++){
+      const key = "w"+w+"-c"+i, ck = S.checks[key];
+      html += '<div class="checkitem'+(ck?" done":"")+'"><input type="checkbox" '+(ck?"checked":"")+' onchange="toggleCheck(\''+key+'\')"><span class="t">Walk or bike '+(i+1)+' ('+spec.walkMin+' min)</span></div>';
+    }
+    html += '</div></details>';
+  }
+  wrap.innerHTML = html;
+}
+function toggleCheck(key){ S.checks[key] = !S.checks[key]; save(); renderExercise(); renderDashboard(); }
+function addWeek(){ S.extraWeeks++; save(); renderExercise(); }
+
+/* ---------- Meals tab ---------- */
+function renderMeals(){
+  const dEl = document.getElementById("mealDate");
+  if (!dEl.value) dEl.value = todayStr();
+  const d = dEl.value;
+  const meals = S.meals.filter(m=>m.date===d);
+  const prot = meals.reduce((a,m)=>a+(+m.protein||0),0);
+  const cals = meals.reduce((a,m)=>a+(+m.cals||0),0);
+  const [pLo,pHi] = proteinRange();
+  const pct = Math.min(100, Math.round(prot/pLo*100));
+  document.getElementById("proteinSummary").innerHTML =
+    '<div class="statrow">'+stat(prot+" g","Protein · goal "+pLo+"–"+pHi+" g")+stat(cals,"Calories")+stat(meals.length,"Meals logged")+'</div>'+
+    '<div class="bar-outer"><div class="bar-inner'+(prot>=pLo?" gold":"")+'" style="width:'+pct+'%"></div></div>'+
+    '<p style="font-size:.85rem;color:var(--muted)">'+(prot>=pLo ? "🎉 Protein goal reached!" : (pLo-prot)+" g to go — about "+Math.ceil((pLo-prot)/25)+" more protein-anchored meal(s).")+'</p>';
+  document.getElementById("mealList").innerHTML = meals.length ?
+    '<table><thead><tr><th>Meal</th><th>Protein</th><th>Cal</th><th></th></tr></thead><tbody>'+
+    meals.map(m=>'<tr><td>'+esc(m.name)+'</td><td>'+m.protein+' g</td><td>'+m.cals+'</td><td><button class="del" onclick="delMeal('+m.id+')">✕</button></td></tr>').join("")+
+    '</tbody></table>' : '<p style="color:var(--muted);font-size:.9rem;margin-top:10px">Nothing logged for this day yet.</p>';
+}
+function addMeal(name, p, c){
+  const d = document.getElementById("mealDate").value || todayStr();
+  const n = name || document.getElementById("mealName").value.trim();
+  const prot = p!=null ? p : parseFloat(document.getElementById("mealProtein").value)||0;
+  const cal = c!=null ? c : parseFloat(document.getElementById("mealCals").value)||0;
+  if (!n) { alert("Please enter what you ate."); return; }
+  S.meals.push({ id: Date.now()+Math.floor(Math.random()*1000), date:d, name:n, protein:prot, cals:cal });
+  save();
+  if (!name){ document.getElementById("mealName").value=""; document.getElementById("mealProtein").value=""; document.getElementById("mealCals").value=""; }
+  renderMeals(); renderDashboard();
+}
+function delMeal(id){ S.meals = S.meals.filter(m=>m.id!==id); save(); renderMeals(); renderDashboard(); }
+function renderFoodChips(){
+  document.getElementById("foodChips").innerHTML = FOODS.map((f,i)=>'<span class="chip" onclick="addMeal(FOODS['+i+'][0],FOODS['+i+'][1],FOODS['+i+'][2])">'+f[0]+' · '+f[1]+'g</span>').join("");
+  document.getElementById("foodTable").innerHTML = FOODS.map(f=>{
+    const m = f[0].match(/^(.*)\s\((.*)\)$/);
+    return '<tr><td>'+(m?m[1]:f[0])+'</td><td>'+(m?m[2]:"—")+'</td><td>'+f[1]+' g</td><td>'+f[2]+'</td></tr>';
+  }).join("");
+}
+
+/* ---------- Barcode scanning & lookup ---------- */
+let scanner = null, foundFood = null;
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    if (document.querySelector('script[src="'+src+'"]')) return res();
+    const s = document.createElement("script");
+    s.src = src; s.onload = res; s.onerror = ()=>rej(new Error("could not load scanner library — check your internet"));
+    document.head.appendChild(s);
+  });
+}
+async function toggleScan(){
+  if (scanner){ stopScan(); return; }
+  const box = document.getElementById("scanBox");
+  box.style.display = "block";
+  try {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js");
+    scanner = new Html5Qrcode("scanVideo");
+    await scanner.start({ facingMode:"environment" }, { fps:10, qrbox:{width:260,height:140} },
+      (code)=>{ document.getElementById("barcodeInput").value = code; stopScan(); lookupBarcode(); },
+      ()=>{});
+  } catch(e){
+    stopScan();
+    document.getElementById("barcodeResult").innerHTML =
+      '<div class="warnnote">Could not start the camera ('+esc(e.message||e)+'). Type the barcode number instead — it\'s printed under the bars.</div>';
+  }
+}
+function stopScan(){
+  if (scanner){ const s = scanner; scanner = null; try{ s.stop().then(()=>s.clear()).catch(()=>{}); }catch(e){} }
+  document.getElementById("scanBox").style.display = "none";
+}
+async function lookupBarcode(){
+  const code = (document.getElementById("barcodeInput").value||"").replace(/\D/g,"");
+  const out = document.getElementById("barcodeResult");
+  if (!code){ out.innerHTML = '<div class="warnnote">Scan or type a barcode number first.</div>'; return; }
+  out.innerHTML = '<p style="color:var(--muted)">Looking up '+code+'…</p>';
+  try {
+    const r = await fetch("https://world.openfoodfacts.org/api/v2/product/"+code+".json?fields=product_name,brands,serving_size,nutriments,image_front_small_url");
+    const j = await r.json();
+    if (!j || j.status !== 1 || !j.product){ out.innerHTML = '<div class="warnnote">No match found for '+code+' in the food database. Add it manually above using the label.</div>'; return; }
+    const p = j.product, n = p.nutriments||{};
+    const perServ = (n["proteins_serving"]!=null && n["energy-kcal_serving"]!=null);
+    const prot = +(perServ ? n["proteins_serving"] : (n["proteins_100g"]||0));
+    const cal  = +(perServ ? n["energy-kcal_serving"] : (n["energy-kcal_100g"]||0));
+    const unit = perServ ? ("per serving"+(p.serving_size?" ("+esc(p.serving_size)+")":"")) : "per 100 g";
+    foundFood = { name:(p.product_name||"Unknown food")+(p.brands?" — "+p.brands.split(",")[0]:""), prot, cal };
+    out.innerHTML = '<div class="docq" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px">'+
+      (p.image_front_small_url ? '<img src="'+p.image_front_small_url+'" alt="" style="width:70px;border-radius:8px">' : "")+
+      '<div style="flex:1;min-width:180px"><b>'+esc(foundFood.name)+'</b><br><span style="font-size:.88rem;color:var(--muted)">'+prot.toFixed(1)+' g protein · '+Math.round(cal)+' cal '+unit+'</span></div>'+
+      '<div style="width:90px"><label>Servings</label><input type="number" id="servMult" value="1" step="0.25" min="0.25"></div>'+
+      '<button class="btn" onclick="addScanned()">Add to log</button></div>';
+  } catch(e){
+    out.innerHTML = '<div class="warnnote">Lookup failed — are you connected to the internet? You can add the food manually above using its label.</div>';
+  }
+}
+function addScanned(){
+  if (!foundFood) return;
+  const m = parseFloat(document.getElementById("servMult").value)||1;
+  addMeal(foundFood.name, Math.round(foundFood.prot*m*10)/10, Math.round(foundFood.cal*m));
+  document.getElementById("barcodeResult").innerHTML = '<p style="color:var(--good);font-weight:600;margin-top:8px">✓ Added to your meal log.</p>';
+}
+
+/* ---------- Recipes & pantry ---------- */
+const RECIPES = [
+  {n:"Greek Yogurt Protein Bowl",e:"🥣",p:32,c:340,ing:["greek yogurt","whey protein","berries","flaxseed"],how:"Stir 1 scoop whey into 1 cup plain Greek yogurt. Top with a handful of berries and 1 tbsp ground flaxseed."},
+  {n:"Feta & Spinach Omelet Plate",e:"🍳",p:28,c:380,ing:["eggs","feta","spinach","edamame","whole grain bread"],how:"2-egg omelet with 1/4 cup feta and a handful of spinach. Serve with 1/2 cup edamame and a slice of whole grain toast."},
+  {n:"Baked Salmon Quinoa Plate",e:"🐟",p:34,c:450,ing:["salmon","quinoa","broccoli","olive oil","lemon"],how:"Bake a 5 oz salmon fillet at 400°F for 12–15 min. Serve over 1/2 cup cooked quinoa with roasted broccoli, olive oil, and lemon."},
+  {n:"Turkey & Broccoli Stir-Fry",e:"🥦",p:35,c:420,ing:["ground turkey","broccoli","snap peas","brown rice","garlic","soy sauce"],how:"Brown 4 oz lean ground turkey with garlic. Add broccoli and snap peas, splash of low-sodium soy sauce, serve over 1/2 cup brown rice."},
+  {n:"Chicken Chickpea Power Salad",e:"🥗",p:36,c:400,ing:["chicken breast","chickpeas","salad greens","olive oil","lemon"],how:"Slice 4 oz grilled chicken over a big bowl of greens with 1/2 cup chickpeas. Dress with olive oil and lemon."},
+  {n:"Tuna & White Bean Salad",e:"🥫",p:33,c:350,ing:["canned tuna","white beans","red onion","olive oil","lemon"],how:"Mix a 3 oz can of tuna with 1/2 cup white beans, diced red onion, olive oil, and lemon. Great on greens or whole grain toast."},
+  {n:"Cottage Cheese Berry Bowl",e:"🫐",p:25,c:250,ing:["cottage cheese","berries","almonds","honey"],how:"3/4 cup cottage cheese topped with berries, a small handful of almonds, and a drizzle of honey."},
+  {n:"Sheet-Pan Chicken & Vegetables",e:"🍗",p:38,c:430,ing:["chicken breast","bell pepper","zucchini","potatoes","olive oil"],how:"Toss 5 oz chicken breast and chopped vegetables with olive oil and herbs. Roast at 425°F for 22–25 min on one pan."},
+  {n:"Shrimp & Zucchini Skillet",e:"🍤",p:30,c:320,ing:["shrimp","zucchini","garlic","olive oil","quinoa"],how:"Sauté 5 oz shrimp with garlic and sliced zucchini in olive oil, 5–6 min. Serve over 1/2 cup quinoa."},
+  {n:"Peanut Butter Banana Protein Smoothie",e:"🥤",p:30,c:320,ing:["whey protein","banana","peanut butter","almond milk"],how:"Blend 1 scoop whey, 1/2 banana, 1 tbsp peanut butter, and 1 cup unsweetened almond milk with ice."},
+  {n:"Slow-Cooker Chicken Chili",e:"🌶️",p:34,c:390,ing:["chicken breast","black beans","tomatoes","corn","chili powder"],how:"Slow-cook chicken breasts with black beans, diced tomatoes, corn, and chili powder 4–6 hrs. Shred and serve — freezes well."},
+  {n:"Baked Cod, Potatoes & Green Beans",e:"🐠",p:32,c:380,ing:["cod","potatoes","green beans","olive oil","lemon"],how:"Bake a 6 oz cod fillet with baby potatoes and green beans, olive oil and lemon, 400°F for ~18 min."},
+  {n:"Egg & Cottage Cheese Scramble",e:"🍽️",p:30,c:330,ing:["eggs","cottage cheese","tomatoes","whole grain bread"],how:"Scramble 2 eggs, fold in 1/2 cup cottage cheese at the end, top with tomatoes. Serve with whole grain toast."},
+  {n:"Lentil Soup with Greek Yogurt",e:"🍲",p:24,c:340,ing:["lentils","carrots","onion","tomatoes","greek yogurt"],how:"Simmer 3/4 cup lentils with carrots, onion, and tomatoes ~25 min. Finish each bowl with a big spoonful of Greek yogurt."}
+];
+function recipeMatches(r){
+  return S.pantry.filter(x=>r.ing.some(i=>i.includes(x)||x.includes(i))).length;
+}
+function renderRecipes(){
+  document.getElementById("pantryChips").innerHTML = S.pantry.length ?
+    S.pantry.map((p,i)=>'<span class="chip">'+esc(p)+' <b style="cursor:pointer" onclick="delPantry('+i+')">✕</b></span>').join("") :
+    '<span style="font-size:.85rem;color:var(--muted)">No ingredients added yet.</span>';
+  let list = RECIPES.map((r,i)=>({r,i,m:recipeMatches(r)}));
+  if (S.pantry.length){
+    list.sort((a,b)=>b.m-a.m);
+    document.getElementById("recipeHint").textContent = "Sorted by how many of your ingredients each meal uses.";
+  } else {
+    document.getElementById("recipeHint").textContent = "Add ingredients above to sort these by what's in your kitchen.";
+  }
+  document.getElementById("recipeGrid").innerHTML = list.map(({r,i,m})=>
+    '<div class="rcard"><div class="rimg">'+r.e+'</div><div class="rbody"><b>'+r.n+'</b>'+
+    '<span class="rmeta">'+r.p+' g protein · ≈'+r.c+' cal</span>'+
+    (m ? '<span class="match">✓ uses '+m+' of your ingredients</span>' : "")+
+    '<details><summary>Ingredients &amp; how-to</summary><p style="margin:6px 0"><b>Needs:</b> '+r.ing.join(", ")+'</p><p>'+r.how+'</p></details>'+
+    '<button class="btn" onclick="logRecipe('+i+')">Log this meal</button></div></div>').join("");
+}
+function addPantry(){
+  const v = (document.getElementById("pantryInput").value||"").trim().toLowerCase();
+  if (!v) return;
+  v.split(",").map(x=>x.trim()).filter(Boolean).forEach(x=>{ if (!S.pantry.includes(x)) S.pantry.push(x); });
+  save();
+  document.getElementById("pantryInput").value = "";
+  renderRecipes();
+}
+function delPantry(i){ S.pantry.splice(i,1); save(); renderRecipes(); }
+function logRecipe(i){
+  const r = RECIPES[i];
+  addMeal(r.n, r.p, r.c);
+  alert('Added "'+r.n+'" to today\'s meal log — '+r.p+' g protein, ~'+r.c+' cal.');
+}
+async function findOnlineIdeas(){
+  const out = document.getElementById("onlineIdeas");
+  const ings = S.pantry.slice(0,3);
+  if (!ings.length){ out.innerHTML = '<p style="font-size:.9rem;color:var(--muted);grid-column:1/-1">Add some ingredients above first, then try again.</p>'; return; }
+  out.innerHTML = '<p style="color:var(--muted);grid-column:1/-1">Searching with: '+ings.map(esc).join(", ")+'…</p>';
+  try {
+    const seen = {};
+    for (const ing of ings){
+      const r = await fetch("https://www.themealdb.com/api/json/v1/1/filter.php?i="+encodeURIComponent(ing.replace(/\s+/g,"_")));
+      const j = await r.json();
+      (j.meals||[]).forEach(m=>{ seen[m.idMeal] = seen[m.idMeal]||{m,count:0}; seen[m.idMeal].count++; });
+    }
+    const list = Object.values(seen).sort((a,b)=>b.count-a.count).slice(0,9);
+    out.innerHTML = list.length ? list.map(x=>
+      '<div class="rcard"><img class="photo" src="'+x.m.strMealThumb+'/preview" alt="'+esc(x.m.strMeal)+'" loading="lazy"><div class="rbody"><b>'+esc(x.m.strMeal)+'</b>'+
+      (x.count>1?'<span class="match">✓ matches '+x.count+' ingredients</span>':"")+
+      '<a href="https://www.themealdb.com/meal/'+x.m.idMeal+'" target="_blank" rel="noopener" style="font-size:.85rem;color:var(--accent-dark)">View full recipe ↗</a></div></div>').join("") :
+      '<p style="font-size:.9rem;color:var(--muted);grid-column:1/-1">No online matches — try simpler ingredient words like "chicken" or "salmon".</p>';
+  } catch(e){
+    out.innerHTML = '<div class="warnnote" style="grid-column:1/-1">Could not reach the recipe service — are you online?</div>';
+  }
+}
+
+/* ---------- Calculators ---------- */
+function calcEnergy(){
+  const age = parseFloat(document.getElementById("cAge").value)||61;
+  const hIn = parseFloat(document.getElementById("cHeight").value)||64;
+  const lbs = parseFloat(document.getElementById("cWeight").value)||latestWeight();
+  const act = parseFloat(document.getElementById("cActivity").value)||1.375;
+  S.profile.age = age; S.profile.heightIn = hIn; S.profile.activity = act;
+  if (!S.profile.startWeight) S.profile.startWeight = lbs;
+  save();
+  const w = kg(lbs), h = hIn*2.54;
+  const bmr = Math.round(10*w + 6.25*h - 5*age - 161); // Mifflin-St Jeor, female
+  const tdee = Math.round(bmr*act);
+  const [pLo,pHi] = [Math.round(w*1.2), Math.round(w*1.6)];
+  document.getElementById("energyResults").innerHTML =
+    '<div class="statrow">'+
+      stat(bmr,"BMR (cal/day at rest)")+
+      stat(tdee,"Maintenance (TDEE)")+
+      stat(tdee-250,"Eat this → lose ~0.5 lb/wk")+
+      stat(tdee-500,"Eat this → lose ~1 lb/wk")+
+    '</div>'+
+    '<div class="note">Your protein target: <b>'+pLo+'–'+pHi+' g/day</b> (1.2–1.6 g per kg body weight), split into 3–4 meals of 25–35 g.</div>'+
+    '<div class="warnnote">Avoid going below ~1,200 calories/day without medical supervision — aggressive cuts accelerate muscle loss after menopause, which works against you.</div>';
+}
+function renderBurnOptions(){
+  document.getElementById("burnActivity").innerHTML = METS.map((m,i)=>'<option value="'+i+'">'+m[0]+'</option>').join("");
+  if (!document.getElementById("burnDate").value) document.getElementById("burnDate").value = todayStr();
+}
+function calcBurn(log){
+  const i = parseInt(document.getElementById("burnActivity").value)||0;
+  const min = parseFloat(document.getElementById("burnMin").value)||30;
+  const d = document.getElementById("burnDate").value || todayStr();
+  const met = METS[i][1];
+  const kcal = Math.round(met*3.5*kg(latestWeight())/200*min);
+  document.getElementById("burnResult").innerHTML = '<div class="result-big">≈ '+kcal+' calories</div><p style="font-size:.85rem;color:var(--muted)">'+METS[i][0]+' · '+min+' min · at '+latestWeight().toFixed(0)+' lb</p>';
+  if (log){
+    S.activities.push({ id: Date.now(), date:d, name:METS[i][0], min:min, kcal:kcal });
+    save(); renderActivityLog(); renderDashboard();
+  }
+}
+function renderActivityLog(){
+  const recent = S.activities.slice(-12).reverse();
+  document.getElementById("activityLog").innerHTML = recent.length ?
+    '<h3>Recent logged activity</h3><table><thead><tr><th>Date</th><th>Activity</th><th>Min</th><th>Cal</th><th></th></tr></thead><tbody>'+
+    recent.map(a=>'<tr><td>'+fmtDate(a.date)+'</td><td>'+esc(a.name)+'</td><td>'+a.min+'</td><td>'+a.kcal+'</td><td><button class="del" onclick="delAct('+a.id+')">✕</button></td></tr>').join("")+
+    '</tbody></table>' : "";
+}
+function delAct(id){ S.activities = S.activities.filter(a=>a.id!==id); save(); renderActivityLog(); renderDashboard(); }
+
+/* ---------- Progress ---------- */
+function addWeight(){
+  const d = document.getElementById("wtDate").value || todayStr();
+  const v = parseFloat(document.getElementById("wtVal").value);
+  if (!v){ alert("Please enter a weight."); return; }
+  S.weights = S.weights.filter(w=>w.date!==d);
+  S.weights.push({date:d, lbs:v});
+  S.weights.sort((a,b)=>a.date<b.date?-1:1);
+  if (!S.profile.startWeight) S.profile.startWeight = v;
+  save();
+  document.getElementById("wtVal").value = "";
+  renderProgress(); renderDashboard();
+}
+function delWeight(date){ S.weights = S.weights.filter(w=>w.date!==date); save(); renderProgress(); renderDashboard(); }
+function renderProgress(){
+  if (!document.getElementById("wtDate").value) document.getElementById("wtDate").value = todayStr();
+  const ws = S.weights;
+  const statsEl = document.getElementById("wtStats");
+  if (ws.length){
+    const first = ws[0].lbs, last = ws[ws.length-1].lbs, ch = last-first;
+    statsEl.innerHTML = '<div class="statrow">'+stat(first.toFixed(1),"Starting (lb)")+stat(last.toFixed(1),"Current (lb)")+stat((ch>0?"+":"")+ch.toFixed(1),"Change (lb)")+'</div>';
+  } else statsEl.innerHTML = "";
+  document.getElementById("wtList").innerHTML = ws.length ?
+    '<table><thead><tr><th>Date</th><th>Weight</th><th></th></tr></thead><tbody>'+
+    ws.slice(-10).reverse().map(w=>'<tr><td>'+fmtDate(w.date)+'</td><td>'+w.lbs.toFixed(1)+' lb</td><td><button class="del" onclick="delWeight(\''+w.date+'\')">✕</button></td></tr>').join("")+
+    '</tbody></table>' : "";
+  drawWeightChart();
+  drawProteinChart();
+  drawCalsChart();
+  drawWorkoutsChart();
+}
+/* ---------- Canvas chart helpers ---------- */
+function setupCanvas(id){
+  const c = document.getElementById(id);
+  const cssW = c.clientWidth || 800;
+  const cssH = parseInt(c.getAttribute("height"))||200;
+  const r = window.devicePixelRatio||1;
+  c.width = cssW*r; c.height = cssH*r; c.style.height = cssH+"px";
+  const ctx = c.getContext("2d");
+  ctx.scale(r,r);
+  ctx.clearRect(0,0,cssW,cssH);
+  return {ctx, W:cssW, H:cssH};
+}
+function emptyMsg(ctx,W,H,msg){ ctx.fillStyle="#999"; ctx.font="14px Segoe UI, sans-serif"; ctx.textAlign="center"; ctx.fillText(msg, W/2, H/2); }
+function last14(){
+  const arr=[]; const now=new Date();
+  for(let i=13;i>=0;i--){ const d=new Date(now); d.setDate(d.getDate()-i);
+    arr.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")); }
+  return arr;
+}
+function drawWeightChart(){
+  const {ctx,W,H} = setupCanvas("chartWeight");
+  const ws = S.weights;
+  if (ws.length<2){ emptyMsg(ctx,W,H,"Log at least two weigh-ins to see your trend line"); return; }
+  const pad={l:46,r:12,t:14,b:26};
+  const vals = ws.map(w=>w.lbs);
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  const span=Math.max(2,hi-lo); lo-=span*0.15; hi+=span*0.15;
+  const x=i=>pad.l+(W-pad.l-pad.r)*(ws.length===1?0.5:i/(ws.length-1));
+  const y=v=>pad.t+(H-pad.t-pad.b)*(1-(v-lo)/(hi-lo));
+  ctx.strokeStyle="#e6e2da"; ctx.fillStyle="#888"; ctx.font="11px Segoe UI, sans-serif"; ctx.textAlign="right";
+  for(let g=0;g<=4;g++){ const v=lo+(hi-lo)*g/4, yy=y(v);
+    ctx.beginPath(); ctx.moveTo(pad.l,yy); ctx.lineTo(W-pad.r,yy); ctx.stroke();
+    ctx.fillText(v.toFixed(1), pad.l-6, yy+4); }
+  ctx.strokeStyle="#0e7c7b"; ctx.lineWidth=2.5; ctx.beginPath();
+  ws.forEach((w,i)=>{ i?ctx.lineTo(x(i),y(w.lbs)):ctx.moveTo(x(i),y(w.lbs)); }); ctx.stroke();
+  ctx.fillStyle="#0e7c7b";
+  ws.forEach((w,i)=>{ ctx.beginPath(); ctx.arc(x(i),y(w.lbs),4,0,7); ctx.fill(); });
+  ctx.fillStyle="#888"; ctx.textAlign="center";
+  ctx.fillText(fmtDate(ws[0].date), x(0)+14, H-8);
+  ctx.fillText(fmtDate(ws[ws.length-1].date), x(ws.length-1)-14, H-8);
+}
+function drawBarsChart(id, days, series, targetLine, emptyText){
+  const {ctx,W,H} = setupCanvas(id);
+  const hasData = series.some(s=>s.values.some(v=>v>0));
+  if (!hasData){ emptyMsg(ctx,W,H,emptyText); return; }
+  const pad={l:44,r:10,t:14,b:26};
+  let hi = Math.max(targetLine||0, ...series.flatMap(s=>s.values))*1.15 || 10;
+  const y=v=>pad.t+(H-pad.t-pad.b)*(1-v/hi);
+  ctx.strokeStyle="#e6e2da"; ctx.fillStyle="#888"; ctx.font="11px Segoe UI, sans-serif"; ctx.textAlign="right";
+  for(let g=0;g<=4;g++){ const v=hi*g/4, yy=y(v);
+    ctx.beginPath(); ctx.moveTo(pad.l,yy); ctx.lineTo(W-pad.r,yy); ctx.stroke();
+    ctx.fillText(Math.round(v), pad.l-6, yy+4); }
+  const n=days.length, slot=(W-pad.l-pad.r)/n, bw=slot/(series.length+0.6);
+  days.forEach((d,i)=>{
+    series.forEach((s,si)=>{
+      const v=s.values[i]; if(v<=0) return;
+      ctx.fillStyle=s.color;
+      ctx.fillRect(pad.l+slot*i+slot*0.15+bw*si, y(v), bw, (H-pad.b)-y(v));
+    });
+    if (i%2===0){ ctx.fillStyle="#888"; ctx.textAlign="center"; ctx.fillText(d.slice(5).replace("-","/"), pad.l+slot*i+slot/2, H-8); }
+  });
+  if (targetLine){
+    ctx.strokeStyle="#c9a227"; ctx.setLineDash([6,4]); ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(pad.l,y(targetLine)); ctx.lineTo(W-pad.r,y(targetLine)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle="#8a6d00"; ctx.textAlign="left"; ctx.fillText("goal "+targetLine, pad.l+4, y(targetLine)-5);
+  }
+  if (series.length>1){
+    let lx = pad.l+6, ly = pad.t+2;
+    series.forEach(s=>{ ctx.fillStyle=s.color; ctx.fillRect(lx,ly,10,10); ctx.fillStyle="#555"; ctx.textAlign="left"; ctx.fillText(s.name, lx+14, ly+9); lx += 14+ctx.measureText(s.name).width+16; });
+  }
+}
+function drawProteinChart(){
+  const days = last14();
+  const vals = days.map(d=>S.meals.filter(m=>m.date===d).reduce((a,m)=>a+(+m.protein||0),0));
+  drawBarsChart("chartProtein", days, [{name:"Protein (g)", values:vals, color:"#0e7c7b"}], proteinRange()[0], "Log meals to see your daily protein here");
+}
+function drawCalsChart(){
+  const days = last14();
+  const eaten = days.map(d=>S.meals.filter(m=>m.date===d).reduce((a,m)=>a+(+m.cals||0),0));
+  const burned = days.map(d=>S.activities.filter(a=>a.date===d).reduce((a,x)=>a+x.kcal,0));
+  drawBarsChart("chartCals", days, [{name:"Eaten",values:eaten,color:"#7b4b94"},{name:"Burned (exercise)",values:burned,color:"#0e7c7b"}], null, "Log meals and activities to compare calories in vs. out");
+}
+function drawWorkoutsChart(){
+  const n = Math.min(totalWeeks(), Math.max(currentWeek(),8));
+  const labels=[], vals=[];
+  for(let w=1;w<=n;w++){ labels.push("wk"+w); vals.push(weekProgress(w).done); }
+  const {ctx,W,H} = setupCanvas("chartWorkouts");
+  if (!vals.some(v=>v>0)){ emptyMsg(ctx,W,H,"Check off sessions in the Exercise tab to see weekly totals"); return; }
+  const pad={l:36,r:10,t:14,b:26};
+  const hi=Math.max(8,...vals)+1;
+  const y=v=>pad.t+(H-pad.t-pad.b)*(1-v/hi);
+  ctx.strokeStyle="#e6e2da"; ctx.fillStyle="#888"; ctx.font="11px Segoe UI, sans-serif"; ctx.textAlign="right";
+  for(let g=0;g<=4;g++){ const v=hi*g/4, yy=y(v); ctx.beginPath(); ctx.moveTo(pad.l,yy); ctx.lineTo(W-pad.r,yy); ctx.stroke(); ctx.fillText(Math.round(v),pad.l-6,yy+4); }
+  const slot=(W-pad.l-pad.r)/n;
+  vals.forEach((v,i)=>{
+    ctx.fillStyle = (i+1===currentWeek()) ? "#c9a227" : "#0e7c7b";
+    if (v>0) ctx.fillRect(pad.l+slot*i+slot*0.2, y(v), slot*0.6, (H-pad.b)-y(v));
+    ctx.fillStyle="#888"; ctx.textAlign="center";
+    if (n<=16 || i%2===0) ctx.fillText(labels[i], pad.l+slot*i+slot/2, H-8);
+  });
+}
+
+/* ---------- Doctor tab ---------- */
+function renderDoctor(){
+  document.getElementById("apptDate").value = S.doctor.apptDate || "";
+  const all = DOCQ.concat(S.doctor.custom);
+  document.getElementById("docQuestions").innerHTML = all.map((q,i)=>{
+    const isCustom = i>=DOCQ.length;
+    return '<div class="docq"><div class="q">'+(i+1)+'. '+esc(q)+(isCustom?' <button class="del" title="Remove" onclick="delDocQ('+(i-DOCQ.length)+')">✕</button>':'')+'</div>'+
+      '<textarea placeholder="Doctor’s answer / notes..." oninput="saveAnswer('+i+',this.value)">'+esc(S.doctor.answers[i]||"")+'</textarea></div>';
+  }).join("");
+}
+function saveAnswer(i,v){ S.doctor.answers[i]=v; save(); }
+function saveAppt(){ S.doctor.apptDate = document.getElementById("apptDate").value; save(); }
+function addDocQ(){
+  const v = document.getElementById("newDocQ").value.trim();
+  if (!v) return;
+  S.doctor.custom.push(v); save();
+  document.getElementById("newDocQ").value="";
+  renderDoctor();
+}
+function delDocQ(ci){
+  const idx = DOCQ.length+ci;
+  delete S.doctor.answers[idx];
+  S.doctor.custom.splice(ci,1);
+  save(); renderDoctor();
+}
+
+/* ---------- Render all ---------- */
+function renderAll(){
+  renderDashboard();
+  renderExercise();
+  renderMeals();
+  renderFoodChips();
+  renderRecipes();
+  renderBurnOptions();
+  renderActivityLog();
+  renderProgress();
+  renderDoctor();
+  document.getElementById("cAge").value = S.profile.age;
+  document.getElementById("cHeight").value = S.profile.heightIn;
+  document.getElementById("cWeight").value = latestWeight();
+  document.getElementById("cActivity").value = String(S.profile.activity);
+}
+document.getElementById("mealDate").addEventListener("change", renderMeals);
+document.getElementById("pantryInput").addEventListener("keydown", e=>{ if(e.key==="Enter") addPantry(); });
+document.getElementById("barcodeInput").addEventListener("keydown", e=>{ if(e.key==="Enter") lookupBarcode(); });
+window.addEventListener("resize", ()=>{ if(document.getElementById("tab-progress").classList.contains("active")) renderProgress(); });
+renderAll();
+</script>
+</body>
+</html>
