@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Health Tracker</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: Arial, sans-serif; margin: 2rem auto; max-width: 900px; padding: 0 1rem; }
+    h1 { margin-bottom: 0.5rem; }
+    form { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+    label { display: flex; flex-direction: column; font-size: 0.9rem; gap: 0.35rem; }
+    input, textarea, button { font: inherit; padding: 0.5rem; }
+    textarea { min-height: 72px; resize: vertical; }
+    .full-width { grid-column: 1 / -1; }
+    button { cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1.25rem; }
+    th, td { border: 1px solid #999; padding: 0.5rem; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Health Tracker</h1>
+  <p>Track your daily habits in one place.</p>
+
+  <form id="entry-form">
+    <label>
+      Date
+      <input id="date" type="date" required>
+    </label>
+    <label>
+      Water (glasses)
+      <input id="water" type="number" min="0" step="1" required>
+    </label>
+    <label>
+      Sleep (hours)
+      <input id="sleep" type="number" min="0" step="0.5" required>
+    </label>
+    <label>
+      Steps
+      <input id="steps" type="number" min="0" step="1" required>
+    </label>
+    <label class="full-width">
+      Notes
+      <textarea id="notes" placeholder="How are you feeling today?"></textarea>
+    </label>
+    <button class="full-width" type="submit">Save entry</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Water</th>
+        <th>Sleep</th>
+        <th>Steps</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody id="entries"></tbody>
+  </table>
+
+  <script>
+    const STORAGE_KEY = "health-tracker-entries";
+    const form = document.getElementById("entry-form");
+    const entriesBody = document.getElementById("entries");
+    const dateInput = document.getElementById("date");
+
+    if (!dateInput.value) {
+      dateInput.valueAsDate = new Date();
+    }
+
+    const readEntries = () => {
+      try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? [];
+      } catch {
+        return [];
+      }
+    };
+
+    const render = (entries) => {
+      entriesBody.innerHTML = "";
+      entries.forEach((entry) => {
+        const row = document.createElement("tr");
+        [entry.date, entry.water, entry.sleep, entry.steps, entry.notes || ""].forEach((value) => {
+          const cell = document.createElement("td");
+          cell.textContent = String(value);
+          row.appendChild(cell);
+        });
+        entriesBody.appendChild(row);
+      });
+    };
+
+    const saveEntries = (entries) => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    };
+
+    const entries = readEntries();
+    render(entries);
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const entry = {
+        date: document.getElementById("date").value,
+        water: Number(document.getElementById("water").value),
+        sleep: Number(document.getElementById("sleep").value),
+        steps: Number(document.getElementById("steps").value),
+        notes: document.getElementById("notes").value.trim()
+      };
+      entries.unshift(entry);
+      saveEntries(entries);
+      render(entries);
+      form.reset();
+      dateInput.valueAsDate = new Date();
+    });
+  </script>
+</body>
+</html>
