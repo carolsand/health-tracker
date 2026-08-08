@@ -22,7 +22,7 @@
   </g>
 
   <!-- hub -->
-  <circle cx="500" cy="280" r="72" fill="#4951b6"/>
+  <circle cx="500" cy="280" r="72" fill="#7c6e1d"/>
   <text x="500" y="272" text-anchor="middle" fill="#ffffff" font-size="17" font-weight="700">Health</text>
   <text x="500" y="294" text-anchor="middle" fill="#ffffff" font-size="17" font-weight="700">Tracker</text>
 
