@@ -87,16 +87,48 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 .flexrow{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
 .flexrow>div{flex:1;min-width:120px}
 .result-big{font-size:1.35rem;font-weight:700;color:var(--accent-dark);margin:6px 0}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,var(--accent-dark),var(--accent))}
+.login-card{background:var(--card);border-radius:16px;padding:28px 24px;max-width:360px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+.login-card h1{font-size:1.3rem;color:var(--accent-dark);margin-bottom:4px}
+.login-card .sub{font-size:.9rem;color:var(--muted);margin-bottom:16px}
+.login-card label{margin-top:12px}
 @media(max-width:600px){nav button{padding:9px 11px;font-size:.9rem}}
+@media(max-width:480px){
+  header h1{min-width:180px;font-size:1.15rem}
+  .hdr-btns button{padding:6px 10px;font-size:.78rem}
+  nav{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;justify-content:flex-start}
+  nav button{flex:none;white-space:nowrap}
+  .checkitem{padding:10px 4px}
+  .checkitem input[type=checkbox]{width:26px;height:26px}
+  button.del{padding:8px 10px;font-size:1.2rem}
+  .chip b{padding:4px 6px;display:inline-block}
+  main table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .flexrow>div{min-width:100px}
+}
 </style>
 </head>
 <body>
+<div id="loginScreen" class="login-screen" style="display:none">
+  <div class="login-card">
+    <h1>Carol's Strength + Nutrition Tracker</h1>
+    <p class="sub">Sign in to view your data.</p>
+    <form id="loginForm">
+      <label>Username<input type="text" id="loginUsername" autocomplete="username" required></label>
+      <label>Password<input type="password" id="loginPassword" autocomplete="current-password" required></label>
+      <button class="btn" type="submit" style="width:100%">Log in</button>
+      <p id="loginError" class="warnnote" style="display:none;margin-top:12px"></p>
+    </form>
+  </div>
+</div>
+
+<div id="appRoot">
 <header>
   <h1>Carol's Strength + Nutrition Tracker</h1>
   <div class="hdr-btns">
     <button onclick="exportData()">⬇ Backup</button>
     <button onclick="document.getElementById('importFile').click()">⬆ Restore</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    <button onclick="logout()">Log out</button>
   </div>
   <div class="sub" id="hdrSub"></div>
 </header>
@@ -287,6 +319,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <footer>
 This tracker is a personal organizing tool, not medical advice. Review your exercise, nutrition, and medication plans with your doctor — especially given your estradiol therapy and any other conditions or medications.
 </footer>
+</div><!-- /#appRoot -->
 
 <script>
 "use strict";
@@ -308,7 +341,59 @@ function loadState(){
   catch(e){}
   return JSON.parse(JSON.stringify(DEFAULT_STATE));
 }
-function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function cacheLocally(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+
+/* ---------- Server sync ---------- */
+let syncTimer = null;
+function save(){
+  cacheLocally();
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncToServer, 600);
+}
+async function syncToServer(){
+  try {
+    await fetch("/api/state", { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(S) });
+  } catch(e){ /* offline — local cache already has the latest state, will sync on next successful save */ }
+}
+async function refreshFromServer(){
+  try {
+    const r = await fetch("/api/state");
+    if (r.status === 401){ showLogin(); return; }
+    if (!r.ok) return;
+    S = await r.json();
+    cacheLocally();
+    renderAll();
+  } catch(e){ /* offline — keep using the locally cached state already on screen */ }
+}
+function showLogin(){
+  document.getElementById("appRoot").style.display = "none";
+  document.getElementById("loginScreen").style.display = "flex";
+}
+function showApp(){
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("appRoot").style.display = "block";
+}
+async function logout(){
+  try { await fetch("/api/logout", { method:"POST" }); } catch(e){}
+  showLogin();
+}
+document.getElementById("loginForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const username = document.getElementById("loginUsername").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const errEl = document.getElementById("loginError");
+  errEl.style.display = "none";
+  try {
+    const r = await fetch("/api/login", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({username, password}) });
+    if (!r.ok){ errEl.textContent = "Incorrect username or password."; errEl.style.display = "block"; return; }
+    document.getElementById("loginPassword").value = "";
+    showApp();
+    refreshFromServer();
+  } catch(e){
+    errEl.textContent = "Could not reach the server. Check your connection and try again.";
+    errEl.style.display = "block";
+  }
+});
 function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function fmtDate(s){ const [y,m,d]=s.split("-"); return m+"/"+d+"/"+y.slice(2); }
 function esc(t){ return String(t).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -972,6 +1057,7 @@ document.getElementById("pantryInput").addEventListener("keydown", e=>{ if(e.key
 document.getElementById("barcodeInput").addEventListener("keydown", e=>{ if(e.key==="Enter") lookupBarcode(); });
 window.addEventListener("resize", ()=>{ if(document.getElementById("tab-progress").classList.contains("active")) renderProgress(); });
 renderAll();
+refreshFromServer();
 </script>
 </body>
 </html>
