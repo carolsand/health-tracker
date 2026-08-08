@@ -107,6 +107,13 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 .microBarInner.gold{background:linear-gradient(90deg,var(--gold),#a3831c)}
 .microRemain{font-size:.72rem;color:var(--muted);margin-top:4px}
 .microCard.warn .microRemain{color:var(--warn);font-weight:600}
+.ingredientsSection{margin-top:20px;padding-top:16px;border-top:2px dashed var(--line)}
+.ingredientsSection h4{display:flex;align-items:center;gap:6px;font-size:1.02rem;color:var(--accent-dark)}
+.ingredientsPreviewBox{background:linear-gradient(135deg,var(--accent-light),var(--plum-light));border-radius:12px;padding:10px 12px;margin-top:8px}
+.ingredientsPreviewBox table{margin:4px 0}
+.ingredientsPreviewBox th{color:var(--accent-dark);border-bottom-color:rgba(3,46,140,.15)}
+.ingredientsPreviewBox td{border-bottom-color:rgba(3,46,140,.1)}
+.ingredientsPreviewBox tr:last-child td{border-bottom:none}
 .rlist{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .rlist .rrow{border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;align-items:center;gap:12px;padding:10px 12px}
 .rlist .rrow .remoji{font-size:32px;flex:none;width:44px;text-align:center}
@@ -296,18 +303,22 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
         <div><button class="btn ghost" onclick="addCustomIngredient()">+ Add ingredient</button></div>
       </div>
     </details>
-    <h4 style="margin:14px 0 4px">Ingredients In This Meal</h4>
-    <div id="mealIngredientsPreview"></div>
-    <button class="btn" onclick="saveMealEntry()">Add Meal</button>
-    <h3>📷 Scan A Packaged Food (Barcode)</h3>
-    <p style="font-size:.85rem;color:var(--muted)">Uses your camera and the free Open Food Facts database — needs internet. No camera? Type the number printed under the bars.</p>
-    <div class="flexrow">
-      <div style="flex:2"><label>Barcode number</label><input type="text" id="barcodeInput" inputmode="numeric" placeholder="e.g., 016000275270"></div>
-      <div><button class="btn secondary" onclick="toggleScan()">📷 Scan with camera</button></div>
-      <div><button class="btn" onclick="lookupBarcode()">Look up</button></div>
+    <details id="barcodeDetails">
+      <summary>📷 Or scan a packaged food (barcode)</summary>
+      <p style="font-size:.85rem;color:var(--muted);margin:6px 0">Uses your camera and the free Open Food Facts database — needs internet. No camera? Type the number printed under the bars.</p>
+      <div class="flexrow">
+        <div style="flex:2"><label>Barcode number</label><input type="text" id="barcodeInput" inputmode="numeric" placeholder="e.g., 016000275270"></div>
+        <div><button class="btn secondary" onclick="toggleScan()">📷 Scan with camera</button></div>
+        <div><button class="btn" onclick="lookupBarcode()">Look up</button></div>
+      </div>
+      <div id="scanBox" style="display:none"><div id="scanVideo"></div><button class="btn ghost" onclick="stopScan()">Stop camera</button></div>
+      <div id="barcodeResult"></div>
+    </details>
+    <div class="ingredientsSection">
+      <h4>🍽️ Ingredients In This Meal</h4>
+      <div id="mealIngredientsPreview" class="ingredientsPreviewBox"></div>
+      <button class="btn" onclick="saveMealEntry()">Add Meal</button>
     </div>
-    <div id="scanBox" style="display:none"><div id="scanVideo"></div><button class="btn ghost" onclick="stopScan()">Stop camera</button></div>
-    <div id="barcodeResult"></div>
   </div>
   <div class="card">
     <h2>Logged Meals</h2>
@@ -1631,8 +1642,10 @@ function renderIngredientsPreview(){
   const el = document.getElementById("mealIngredientsPreview");
   if (!el) return;
   el.innerHTML = mealIngredients.length ?
-    '<table><thead><tr><th>Ingredient</th><th>Protein</th><th>Cal</th><th></th></tr></thead><tbody>'+
-    mealIngredients.map((ing,i)=>'<tr><td>'+esc(ing.name)+'</td><td>'+ing.protein+' g</td><td>'+ing.cals+'</td><td><button class="del" onclick="removeMealIngredient('+i+')">✕</button></td></tr>').join("")+
+    '<table><thead><tr><th>Ingredient</th><th>Protein</th><th>Cal</th>'+MICRO_FIELDS.map(([k,label,unit,icon])=>'<th>'+icon+' '+label+'</th>').join("")+'<th></th></tr></thead><tbody>'+
+    mealIngredients.map((ing,i)=>'<tr><td>'+esc(ing.name)+'</td><td>'+ing.protein+' g</td><td>'+ing.cals+'</td>'+
+      MICRO_FIELDS.map(([k,label,unit])=>'<td>'+(ing[k]||0)+' '+unit+'</td>').join("")+
+      '<td><button class="del" onclick="removeMealIngredient('+i+')">✕</button></td></tr>').join("")+
     '</tbody></table>' : '<p style="color:var(--muted);font-size:.85rem;margin-top:6px">No ingredients added yet.</p>';
 }
 function saveMealEntry(){
@@ -1725,24 +1738,40 @@ async function lookupBarcode(){
     }
     const p = j.product, n = p.nutriments||{};
     const perServ = (n["proteins_serving"]!=null && n["energy-kcal_serving"]!=null);
-    const prot = +(perServ ? n["proteins_serving"] : (n["proteins_100g"]||0));
-    const cal  = +(perServ ? n["energy-kcal_serving"] : (n["energy-kcal_100g"]||0));
+    const suf = perServ ? "_serving" : "_100g";
+    const gramField = (key)=>{ const v = n[key+suf]; return v!=null ? +v*1000 : 0; }; // OFF reports these in grams -- convert to mg
+    const prot = +(n["proteins"+suf]||0);
+    const cal  = +(n["energy-kcal"+suf]||0);
     const unit = perServ ? ("per serving"+(p.serving_size?" ("+esc(p.serving_size)+")":"")) : "per 100 g";
-    foundFood = { name:(p.product_name||"Unknown food")+(p.brands?" — "+p.brands.split(",")[0]:""), prot, cal };
+    foundFood = {
+      name:(p.product_name||"Unknown food")+(p.brands?" — "+p.brands.split(",")[0]:""), prot, cal,
+      fiber: +(n["fiber"+suf]||0),
+      sugar: +(n["sugars"+suf]||0),
+      sodium: Math.round(gramField("sodium")),
+      vitaminD: +(n["vitamin-d"+suf]||0),
+      calcium: Math.round(gramField("calcium")),
+      iron: Math.round(gramField("iron")*10)/10,
+      potassium: Math.round(gramField("potassium"))
+    };
     out.innerHTML = '<div class="docq" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px">'+
       (p.image_front_small_url ? '<img src="'+p.image_front_small_url+'" alt="" style="width:70px;border-radius:8px">' : "")+
       '<div style="flex:1;min-width:180px"><b>'+esc(foundFood.name)+'</b><br><span style="font-size:.88rem;color:var(--muted)">'+prot.toFixed(1)+' g protein · '+Math.round(cal)+' cal '+unit+'</span></div>'+
       '<div style="width:90px"><label>Servings</label><input type="number" id="servMult" value="1" step="0.25" min="0.25"></div>'+
-      '<button class="btn" onclick="addScanned()">Add to log</button></div>';
+      '<button class="btn" onclick="addScannedIngredient()">+ Add ingredient</button></div>';
   } catch(e){
     out.innerHTML = '<div class="warnnote">Lookup failed — are you connected to the internet? You can add the food manually above using its label.</div>';
   }
 }
-function addScanned(){
+function addScannedIngredient(){
   if (!foundFood) return;
   const m = parseFloat(document.getElementById("servMult").value)||1;
-  addMeal(foundFood.name, Math.round(foundFood.prot*m*10)/10, Math.round(foundFood.cal*m));
-  document.getElementById("barcodeResult").innerHTML = '<p style="color:var(--good);font-weight:600;margin-top:8px">✓ Added to your meal log.</p>';
+  const ing = { name: foundFood.name+(m!==1 ? " ("+m+"x)" : ""), protein: Math.round(foundFood.prot*m*10)/10, cals: Math.round(foundFood.cal*m) };
+  MICRO_FIELDS.forEach(([key])=>{ ing[key] = Math.round((foundFood[key]||0)*m*10)/10; });
+  mealIngredients.push(ing);
+  renderIngredientsPreview();
+  document.getElementById("barcodeResult").innerHTML = '<p style="color:var(--good);font-weight:600;margin-top:8px">✓ Added to current meal.</p>';
+  document.getElementById("barcodeInput").value = "";
+  showToast("Added "+foundFood.name+" to current meal", "success");
 }
 
 /* ---------- Recipes & pantry ---------- */
