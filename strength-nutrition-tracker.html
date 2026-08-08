@@ -48,6 +48,12 @@ th{text-align:left;color:var(--muted);font-size:.78rem;text-transform:uppercase;
 td{padding:7px 8px;border-bottom:1px solid var(--line)}
 .chip{display:inline-block;background:var(--plum-light);color:var(--plum);border:1px solid var(--plum);border-radius:20px;padding:5px 12px;font-size:.83rem;margin:3px;cursor:pointer;font-weight:600}
 .chip:hover{background:var(--plum);color:#fff}
+.suggestList{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:260px;overflow-y:auto;z-index:20;margin-top:4px}
+.suggestList .sitem{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.suggestList .sitem:last-child{border-bottom:none}
+.suggestList .sitem:hover,.suggestList .sitem.active{background:var(--accent-light)}
+.suggestList .sitem .sname{font-weight:600;font-size:.92rem}
+.suggestList .sitem .smeta{font-size:.78rem;color:var(--muted);flex:none}
 .bar-outer{background:var(--line);border-radius:10px;height:20px;overflow:hidden;margin:6px 0}
 .bar-inner{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-dark));border-radius:10px;transition:width .4s;min-width:2%}
 .bar-inner.gold{background:linear-gradient(90deg,var(--gold),#a3831c)}
@@ -235,20 +241,43 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <!-- ============ MEALS ============ -->
 <section class="tab" id="tab-meals">
   <div class="card">
-    <h2>Meal &amp; Protein Log</h2>
+    <h2>Nutrient Log</h2>
     <div class="flexrow">
       <div><label>Date</label><input type="date" id="mealDate"></div>
     </div>
     <div id="proteinSummary"></div>
+    <div id="microSummary"></div>
     <h3>Add a meal or snack</h3>
     <div class="flexrow">
-      <div style="flex:2"><label>What did you eat?</label><input type="text" id="mealName" placeholder="e.g., Greek yogurt with berries"></div>
+      <div style="flex:1;position:relative">
+        <label>Search foods (or type your own below)</label>
+        <input type="text" id="mealSearch" placeholder="Start typing, e.g. chicken..." autocomplete="off" oninput="onMealSearchInput()" onfocus="onMealSearchInput()">
+        <div id="mealSuggestions" class="suggestList" style="display:none"></div>
+      </div>
+    </div>
+    <div class="flexrow">
+      <div style="flex:2"><label>Name</label><input type="text" id="mealName" placeholder="e.g., Greek yogurt with berries"></div>
+      <div><label>Servings</label><input type="number" id="mealServings" min="0.25" step="0.25" value="1" onchange="rescaleMealFromServings()"></div>
+    </div>
+    <div class="flexrow">
       <div><label>Protein (g)</label><input type="number" id="mealProtein" min="0" max="200" step="1"></div>
       <div><label>Calories</label><input type="number" id="mealCals" min="0" max="3000" step="5"></div>
       <div><button class="btn" onclick="addMeal()">Add</button></div>
     </div>
-    <h3>Quick add (tap a food)</h3>
-    <div id="foodChips"></div>
+    <details id="mealMicroDetails">
+      <summary>Add micronutrient details (optional)</summary>
+      <div class="flexrow">
+        <div><label>Fiber (g)</label><input type="number" id="mealFiber" min="0" step="0.5"></div>
+        <div><label>Sugar (g)</label><input type="number" id="mealSugar" min="0" step="0.5"></div>
+        <div><label>Sodium (mg)</label><input type="number" id="mealSodium" min="0" step="5"></div>
+      </div>
+      <div class="flexrow">
+        <div><label>Vitamin D (mcg)</label><input type="number" id="mealVitaminD" min="0" step="0.1"></div>
+        <div><label>Calcium (mg)</label><input type="number" id="mealCalcium" min="0" step="5"></div>
+        <div><label>Iron (mg)</label><input type="number" id="mealIron" min="0" step="0.1"></div>
+        <div><label>Potassium (mg)</label><input type="number" id="mealPotassium" min="0" step="5"></div>
+      </div>
+    </details>
     <h3>📷 Scan a packaged food (barcode)</h3>
     <p style="font-size:.85rem;color:var(--muted)">Uses your camera and the free Open Food Facts database — needs internet. No camera? Type the number printed under the bars.</p>
     <div class="flexrow">
@@ -719,13 +748,44 @@ function currentWeek(){
 function totalWeeks(){ return Math.max(8, currentWeek(), 8+S.extraWeeks); }
 
 /* ---------- Foods & METs ---------- */
+// Approximate USDA-ballpark values per serving — a personal tracker, not a certified nutrition database.
 const FOODS = [
-  ["Greek yogurt, plain 2% (1 cup)",20,150],["Cottage cheese (1/2 cup)",14,90],
-  ["Eggs (2 large)",12,140],["Chicken breast, cooked (3 oz)",26,140],
-  ["Salmon, cooked (3 oz)",22,175],["Canned tuna (3 oz)",20,100],
-  ["Edamame (1/2 cup)",9,95],["Chickpeas (1/2 cup)",7,135],
-  ["Quinoa, cooked (1/2 cup)",4,110],["Whey/soy protein (1 scoop)",24,120],
-  ["Lean ground turkey (4 oz)",30,170],["2-egg omelet + feta",18,260]
+  {name:"Greek yogurt, plain 2%", serving:"1 cup", protein:20, cals:150, fiber:0, sugar:9, sodium:80, vitaminD:0, calcium:250, iron:0.2, potassium:280},
+  {name:"Cottage cheese", serving:"1/2 cup", protein:14, cals:90, fiber:0, sugar:4, sodium:350, vitaminD:0, calcium:100, iron:0.1, potassium:100},
+  {name:"Eggs", serving:"2 large", protein:12, cals:140, fiber:0, sugar:0.6, sodium:140, vitaminD:2, calcium:56, iron:1.6, potassium:126},
+  {name:"Chicken breast, cooked", serving:"3 oz", protein:26, cals:140, fiber:0, sugar:0, sodium:60, vitaminD:0, calcium:10, iron:0.5, potassium:220},
+  {name:"Salmon, cooked", serving:"3 oz", protein:22, cals:175, fiber:0, sugar:0, sodium:50, vitaminD:11, calcium:10, iron:0.3, potassium:320},
+  {name:"Canned tuna", serving:"3 oz", protein:20, cals:100, fiber:0, sugar:0, sodium:300, vitaminD:1, calcium:10, iron:1, potassium:240},
+  {name:"Edamame", serving:"1/2 cup", protein:9, cals:95, fiber:4, sugar:2, sodium:15, vitaminD:0, calcium:50, iron:1.8, potassium:340},
+  {name:"Chickpeas", serving:"1/2 cup", protein:7, cals:135, fiber:6, sugar:2, sodium:200, vitaminD:0, calcium:40, iron:1.6, potassium:240},
+  {name:"Quinoa, cooked", serving:"1/2 cup", protein:4, cals:110, fiber:3, sugar:0.5, sodium:5, vitaminD:0, calcium:15, iron:1.4, potassium:170},
+  {name:"Whey/soy protein", serving:"1 scoop", protein:24, cals:120, fiber:1, sugar:2, sodium:130, vitaminD:0, calcium:130, iron:0.5, potassium:180},
+  {name:"Lean ground turkey", serving:"4 oz", protein:30, cals:170, fiber:0, sugar:0, sodium:80, vitaminD:0, calcium:15, iron:1.7, potassium:280},
+  {name:"2-egg omelet + feta", serving:"1 serving", protein:18, cals:260, fiber:0, sugar:1, sodium:420, vitaminD:2, calcium:150, iron:1.8, potassium:160},
+  {name:"Almonds", serving:"1 oz (23 nuts)", protein:6, cals:165, fiber:3.5, sugar:1, sodium:0, vitaminD:0, calcium:75, iron:1.1, potassium:210},
+  {name:"Peanut butter", serving:"2 tbsp", protein:7, cals:190, fiber:2, sugar:3, sodium:150, vitaminD:0, calcium:15, iron:0.6, potassium:190},
+  {name:"Oatmeal, cooked", serving:"1 cup", protein:6, cals:150, fiber:4, sugar:1, sodium:2, vitaminD:0, calcium:20, iron:2, potassium:160},
+  {name:"Brown rice, cooked", serving:"1/2 cup", protein:2.5, cals:110, fiber:1.5, sugar:0, sodium:5, vitaminD:0, calcium:10, iron:0.4, potassium:80},
+  {name:"Whole wheat bread", serving:"1 slice", protein:4, cals:80, fiber:2, sugar:1.5, sodium:130, vitaminD:0, calcium:30, iron:0.9, potassium:70},
+  {name:"Banana", serving:"1 medium", protein:1.3, cals:105, fiber:3, sugar:14, sodium:1, vitaminD:0, calcium:6, iron:0.3, potassium:420},
+  {name:"Apple", serving:"1 medium", protein:0.5, cals:95, fiber:4.4, sugar:19, sodium:2, vitaminD:0, calcium:11, iron:0.2, potassium:195},
+  {name:"Broccoli, cooked", serving:"1 cup", protein:3.7, cals:55, fiber:5, sugar:2, sodium:64, vitaminD:0, calcium:62, iron:1, potassium:460},
+  {name:"Spinach, raw", serving:"2 cups", protein:1.8, cals:14, fiber:1.4, sugar:0.2, sodium:48, vitaminD:0, calcium:60, iron:1.6, potassium:335},
+  {name:"Sweet potato, baked", serving:"1 medium", protein:2, cals:105, fiber:4, sugar:7, sodium:40, vitaminD:0, calcium:40, iron:0.8, potassium:540},
+  {name:"Avocado", serving:"1/2 medium", protein:2, cals:120, fiber:5, sugar:0.5, sodium:5, vitaminD:0, calcium:8, iron:0.3, potassium:490},
+  {name:"Milk, 2%", serving:"1 cup", protein:8, cals:120, fiber:0, sugar:12, sodium:100, vitaminD:2.5, calcium:290, iron:0, potassium:340},
+  {name:"Tofu, firm", serving:"1/2 cup", protein:10, cals:90, fiber:1, sugar:0.5, sodium:9, vitaminD:0, calcium:250, iron:1.5, potassium:150},
+  {name:"Black beans, cooked", serving:"1/2 cup", protein:7.5, cals:115, fiber:7.5, sugar:0.3, sodium:1, vitaminD:0, calcium:23, iron:1.8, potassium:305},
+  {name:"Shrimp, cooked", serving:"3 oz", protein:20, cals:85, fiber:0, sugar:0, sodium:190, vitaminD:0, calcium:40, iron:0.3, potassium:155},
+  {name:"Lentils, cooked", serving:"1/2 cup", protein:9, cals:115, fiber:8, sugar:1.5, sodium:2, vitaminD:0, calcium:19, iron:3.3, potassium:365},
+  {name:"Turkey bacon", serving:"2 slices", protein:6, cals:60, fiber:0, sugar:0, sodium:280, vitaminD:0, calcium:0, iron:0.4, potassium:70},
+  {name:"Protein bar", serving:"1 bar", protein:20, cals:200, fiber:8, sugar:5, sodium:200, vitaminD:0, calcium:100, iron:2, potassium:170},
+  {name:"Hummus", serving:"1/4 cup", protein:4, cals:100, fiber:3, sugar:0, sodium:190, vitaminD:0, calcium:20, iron:1, potassium:115},
+  {name:"Walnuts", serving:"1 oz (14 halves)", protein:4, cals:185, fiber:2, sugar:0.7, sodium:1, vitaminD:0, calcium:28, iron:0.8, potassium:125},
+  {name:"Yogurt, Greek, vanilla", serving:"1 cup", protein:17, cals:200, fiber:0, sugar:20, sodium:90, vitaminD:0, calcium:220, iron:0, potassium:240},
+  {name:"Orange", serving:"1 medium", protein:1.2, cals:62, fiber:3.1, sugar:12, sodium:0, vitaminD:0, calcium:52, iron:0.1, potassium:237},
+  {name:"Pork tenderloin, cooked", serving:"3 oz", protein:24, cals:125, fiber:0, sugar:0, sodium:50, vitaminD:0, calcium:5, iron:1.2, potassium:360},
+  {name:"Cheddar cheese", serving:"1 oz", protein:7, cals:115, fiber:0, sugar:0.5, sodium:180, vitaminD:0, calcium:200, iron:0.2, potassium:30}
 ];
 const METS = [
   ["Brisk walking (3.5 mph)",4.3],["Very brisk walking (4 mph)",5.0],
@@ -978,6 +1038,10 @@ function renderCustomWorkoutHistory(){
 }
 
 /* ---------- Meals tab ---------- */
+const MICRO_FIELDS = [
+  ["fiber","Fiber","g"], ["sugar","Sugar","g"], ["sodium","Sodium","mg"],
+  ["vitaminD","Vitamin D","mcg"], ["calcium","Calcium","mg"], ["iron","Iron","mg"], ["potassium","Potassium","mg"]
+];
 function renderMeals(){
   const dEl = document.getElementById("mealDate");
   if (!dEl.value) dEl.value = todayStr();
@@ -991,6 +1055,11 @@ function renderMeals(){
     '<div class="statrow">'+stat(prot+" g","Protein · goal "+pLo+"–"+pHi+" g")+stat(cals,"Calories")+stat(meals.length,"Meals logged")+'</div>'+
     '<div class="bar-outer"><div class="bar-inner'+(prot>=pLo?" gold":"")+'" style="width:'+pct+'%"></div></div>'+
     '<p style="font-size:.85rem;color:var(--muted)">'+(prot>=pLo ? "🎉 Protein goal reached!" : (pLo-prot)+" g to go — about "+Math.ceil((pLo-prot)/25)+" more protein-anchored meal(s).")+'</p>';
+  document.getElementById("microSummary").innerHTML =
+    '<div class="statrow">'+MICRO_FIELDS.map(([key,label,unit])=>{
+      const total = meals.reduce((a,m)=>a+(+m[key]||0),0);
+      return stat(Math.round(total*10)/10+" "+unit, label+" today");
+    }).join("")+'</div>';
   document.getElementById("mealList").innerHTML = meals.length ?
     '<table><thead><tr><th>Meal</th><th>Protein</th><th>Cal</th><th></th></tr></thead><tbody>'+
     meals.map(m=>'<tr><td>'+esc(m.name)+'</td><td>'+m.protein+' g</td><td>'+m.cals+'</td><td><button class="del" onclick="delMeal('+m.id+')">✕</button></td></tr>').join("")+
@@ -998,23 +1067,69 @@ function renderMeals(){
 }
 function addMeal(name, p, c){
   const d = document.getElementById("mealDate").value || todayStr();
-  const n = name || document.getElementById("mealName").value.trim();
-  const prot = p!=null ? p : parseFloat(document.getElementById("mealProtein").value)||0;
-  const cal = c!=null ? c : parseFloat(document.getElementById("mealCals").value)||0;
+  const fromForm = name==null;
+  const n = fromForm ? document.getElementById("mealName").value.trim() : name;
   if (!n) { showToast("Please enter what you ate.", "info"); return; }
-  S.meals.push({ id: Date.now()+Math.floor(Math.random()*1000), date:d, name:n, protein:prot, cals:cal });
+  const entry = { id: Date.now()+Math.floor(Math.random()*1000), date:d, name:n,
+    protein: fromForm ? parseFloat(document.getElementById("mealProtein").value)||0 : p,
+    cals: fromForm ? parseFloat(document.getElementById("mealCals").value)||0 : c };
+  MICRO_FIELDS.forEach(([key])=>{ entry[key] = fromForm ? parseFloat(document.getElementById("meal"+key[0].toUpperCase()+key.slice(1)).value)||0 : 0; });
+  S.meals.push(entry);
   save();
-  if (!name){ document.getElementById("mealName").value=""; document.getElementById("mealProtein").value=""; document.getElementById("mealCals").value=""; }
+  if (fromForm){
+    ["mealName","mealSearch","mealProtein","mealCals"].forEach(id=>document.getElementById(id).value="");
+    MICRO_FIELDS.forEach(([key])=>{ document.getElementById("meal"+key[0].toUpperCase()+key.slice(1)).value=""; });
+    document.getElementById("mealServings").value = "1";
+    mealSearchBase = null;
+  }
   renderMeals(); renderDashboard();
 }
 function delMeal(id){ S.meals = S.meals.filter(m=>m.id!==id); save(); renderMeals(); renderDashboard(); }
-function renderFoodChips(){
-  document.getElementById("foodChips").innerHTML = FOODS.map((f,i)=>'<span class="chip" onclick="addMeal(FOODS['+i+'][0],FOODS['+i+'][1],FOODS['+i+'][2])">'+f[0]+' · '+f[1]+'g</span>').join("");
-  document.getElementById("foodTable").innerHTML = FOODS.map(f=>{
-    const m = f[0].match(/^(.*)\s\((.*)\)$/);
-    return '<tr><td>'+(m?m[1]:f[0])+'</td><td>'+(m?m[2]:"—")+'</td><td>'+f[1]+' g</td><td>'+f[2]+'</td></tr>';
-  }).join("");
+function renderFoodTable(){
+  document.getElementById("foodTable").innerHTML = FOODS.map(f=>
+    '<tr><td>'+esc(f.name)+'</td><td>'+esc(f.serving)+'</td><td>'+f.protein+' g</td><td>'+f.cals+'</td></tr>'
+  ).join("");
 }
+
+/* ---------- Meal ingredient search / typeahead ---------- */
+let mealSearchBase = null;
+function onMealSearchInput(){
+  const q = document.getElementById("mealSearch").value.trim().toLowerCase();
+  const box = document.getElementById("mealSuggestions");
+  if (!q){ box.style.display = "none"; box.innerHTML = ""; return; }
+  const matches = FOODS.filter(f=>f.name.toLowerCase().includes(q)).slice(0,8);
+  if (!matches.length){ box.style.display = "none"; box.innerHTML = ""; return; }
+  box.innerHTML = matches.map((f,i)=>{
+    const idx = FOODS.indexOf(f);
+    return '<div class="sitem" onclick="selectMealSuggestion('+idx+')"><span class="sname">'+esc(f.name)+'</span><span class="smeta">'+f.protein+'g protein · '+esc(f.serving)+'</span></div>';
+  }).join("");
+  box.style.display = "block";
+}
+function selectMealSuggestion(i){
+  const f = FOODS[i];
+  mealSearchBase = f;
+  document.getElementById("mealName").value = f.name+" ("+f.serving+")";
+  document.getElementById("mealServings").value = "1";
+  document.getElementById("mealSearch").value = "";
+  document.getElementById("mealSuggestions").style.display = "none";
+  applyMealServings(f, 1);
+}
+function applyMealServings(base, mult){
+  document.getElementById("mealProtein").value = Math.round(base.protein*mult*10)/10;
+  document.getElementById("mealCals").value = Math.round(base.cals*mult);
+  MICRO_FIELDS.forEach(([key])=>{
+    document.getElementById("meal"+key[0].toUpperCase()+key.slice(1)).value = Math.round((base[key]||0)*mult*10)/10;
+  });
+}
+function rescaleMealFromServings(){
+  if (!mealSearchBase) return;
+  const mult = parseFloat(document.getElementById("mealServings").value)||1;
+  applyMealServings(mealSearchBase, mult);
+}
+document.addEventListener("click", (e)=>{
+  const box = document.getElementById("mealSuggestions");
+  if (box && !e.target.closest("#mealSearch") && !e.target.closest("#mealSuggestions")) box.style.display = "none";
+});
 
 /* ---------- Barcode scanning & lookup ---------- */
 let scanner = null, foundFood = null;
@@ -1054,7 +1169,13 @@ async function lookupBarcode(){
   try {
     const r = await fetch("https://world.openfoodfacts.org/api/v2/product/"+code+".json?fields=product_name,brands,serving_size,nutriments,image_front_small_url");
     const j = await r.json();
-    if (!j || j.status !== 1 || !j.product){ out.innerHTML = '<div class="warnnote">No match found for '+code+' in the food database. Add it manually above using the label.</div>'; return; }
+    if (!j || j.status !== 1 || !j.product){
+      out.innerHTML = '<div class="warnnote">No match found for '+code+' in the food database. Use the "Add a meal or snack" form above to enter it from the package\'s Nutrition Facts label — including protein, calories, and any vitamins/minerals it lists.</div>';
+      document.getElementById("mealMicroDetails").open = true;
+      document.getElementById("mealName").focus();
+      document.getElementById("mealName").scrollIntoView({behavior:"smooth", block:"center"});
+      return;
+    }
     const p = j.product, n = p.nutriments||{};
     const perServ = (n["proteins_serving"]!=null && n["energy-kcal_serving"]!=null);
     const prot = +(perServ ? n["proteins_serving"] : (n["proteins_100g"]||0));
@@ -1557,7 +1678,7 @@ function renderAll(){
   renderDashboard();
   renderExercise();
   renderMeals();
-  renderFoodChips();
+  renderFoodTable();
   renderRecipes();
   renderBurnOptions();
   renderActivityLog();
