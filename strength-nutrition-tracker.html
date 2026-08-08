@@ -405,7 +405,7 @@ const KEY = "carolStrengthTracker_v1";
 const LAST_USER_KEY = "carolStrengthTracker_lastUser";
 function currentCacheKey(){ return KEY + ":" + (localStorage.getItem(LAST_USER_KEY) || "anon"); }
 const DEFAULT_STATE = {
-  profile: { age: 61, heightIn: 64, startWeight: null, goalWeight: null, activity: 1.375, startDate: null },
+  profile: { age: null, heightIn: null, startWeight: null, goalWeight: null, activity: 1.375, startDate: null },
   weights: [],        // {date, lbs}
   meals: [],          // {date, name, protein, cals}
   activities: [],     // {date, name, min, kcal}
@@ -1117,8 +1117,9 @@ async function findOnlineIdeas(){
 
 /* ---------- Calculators ---------- */
 function calcEnergy(){
-  const age = parseFloat(document.getElementById("cAge").value)||61;
-  const hIn = parseFloat(document.getElementById("cHeight").value)||64;
+  const age = parseFloat(document.getElementById("cAge").value);
+  const hIn = parseFloat(document.getElementById("cHeight").value);
+  if (!age || !hIn){ alert("Please enter your age and height."); return; }
   const lbs = parseFloat(document.getElementById("cWeight").value)||latestWeight();
   const act = parseFloat(document.getElementById("cActivity").value)||1.375;
   S.profile.age = age; S.profile.heightIn = hIn; S.profile.activity = act;
@@ -1478,9 +1479,9 @@ function renderAll(){
   renderActivityLog();
   renderProgress();
   renderDoctor();
-  document.getElementById("cAge").value = S.profile.age;
-  document.getElementById("cHeight").value = S.profile.heightIn;
-  document.getElementById("cWeight").value = latestWeight();
+  document.getElementById("cAge").value = S.profile.age || "";
+  document.getElementById("cHeight").value = S.profile.heightIn || "";
+  document.getElementById("cWeight").value = (S.weights.length || S.profile.startWeight) ? latestWeight() : "";
   document.getElementById("cActivity").value = String(S.profile.activity);
 }
 document.getElementById("mealDate").addEventListener("change", renderMeals);

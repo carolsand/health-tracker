@@ -6,7 +6,7 @@ const router = express.Router();
 
 // Mirrors DEFAULT_STATE in strength-nutrition-tracker.html — used when a user has no saved state yet.
 const DEFAULT_STATE = {
-  profile: { age: 61, heightIn: 64, startWeight: null, goalWeight: null, activity: 1.375, startDate: null },
+  profile: { age: null, heightIn: null, startWeight: null, goalWeight: null, activity: 1.375, startDate: null },
   weights: [],
   meals: [],
   activities: [],
