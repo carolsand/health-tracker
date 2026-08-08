@@ -1405,10 +1405,12 @@ function renderProgress(){
     '<table><thead><tr><th>Date</th><th>Weight</th><th></th></tr></thead><tbody>'+
     ws.slice(-10).reverse().map(w=>'<tr><td>'+fmtDate(w.date)+'</td><td>'+w.lbs.toFixed(1)+' lb</td><td><button class="del" onclick="delWeight(\''+w.date+'\')">✕</button></td></tr>').join("")+
     '</tbody></table>' : "";
-  drawWeightChart();
-  drawProteinChart();
-  drawCalsChart();
-  drawWorkoutsChart();
+  if (document.getElementById("tab-progress").classList.contains("active")){
+    drawWeightChart();
+    drawProteinChart();
+    drawCalsChart();
+    drawWorkoutsChart();
+  }
   renderGoalsProgress();
   renderCompletedActivities();
   renderMealLog30();
