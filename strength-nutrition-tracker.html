@@ -283,11 +283,18 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <!-- ============ PROGRESS ============ -->
 <section class="tab" id="tab-progress">
   <div class="card">
+    <h2>Progress Toward Your Goals</h2>
+    <div id="goalsSummary"></div>
+  </div>
+  <div class="card">
     <h2>Weight Tracking</h2>
     <div class="flexrow">
       <div><label>Date</label><input type="date" id="wtDate"></div>
       <div><label>Weight (lb)</label><input type="number" id="wtVal" min="80" max="400" step="0.1"></div>
       <div><button class="btn" onclick="addWeight()">Log weight</button></div>
+    </div>
+    <div class="flexrow">
+      <div><label>Goal weight (lb)</label><input type="number" id="goalWeightInput" min="80" max="400" step="0.1" onchange="saveGoalWeight()"></div>
     </div>
     <div class="note">Weigh in once or twice a week, same time of day. Daily fluctuations of 1–3 lb are normal water shifts — the trend line is what counts.</div>
     <div id="wtStats"></div>
@@ -306,6 +313,27 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
   <div class="card">
     <h2>Workouts Completed Per Week</h2>
     <canvas id="chartWorkouts" height="200"></canvas>
+  </div>
+  <div class="card">
+    <h2>Plan Sessions Completed — Last 30 Days</h2>
+    <p style="font-size:.85rem;color:var(--muted)">Strength and cardio sessions from your Exercise plan that you've checked off, grouped by week.</p>
+    <div id="completedActivities"></div>
+  </div>
+  <div class="card">
+    <h2>Meal Log — Last 30 Days</h2>
+    <div id="mealLog30"></div>
+  </div>
+  <div class="card">
+    <h2>Activity Log — Last 30 Days</h2>
+    <div id="activityLog30"></div>
+  </div>
+  <div class="card">
+    <h2>Email This Summary</h2>
+    <p style="font-size:.9rem;color:var(--muted)">Send your weight, nutrition, and workout progress to your doctor, nutritionist, trainer, or insurance company. This opens your own email app with a summary pre-filled — you review and send it yourself.</p>
+    <div class="flexrow">
+      <div><label>Their email (optional)</label><input type="email" id="summaryRecipient" placeholder="e.g., doctor@example.com"></div>
+      <div><button class="btn" onclick="emailSummary()">✉ Email Summary</button></div>
+    </div>
   </div>
 </section>
 
@@ -350,7 +378,7 @@ const KEY = "carolStrengthTracker_v1";
 const LAST_USER_KEY = "carolStrengthTracker_lastUser";
 function currentCacheKey(){ return KEY + ":" + (localStorage.getItem(LAST_USER_KEY) || "anon"); }
 const DEFAULT_STATE = {
-  profile: { age: 61, heightIn: 64, startWeight: null, activity: 1.375, startDate: null },
+  profile: { age: 61, heightIn: 64, startWeight: null, goalWeight: null, activity: 1.375, startDate: null },
   weights: [],        // {date, lbs}
   meals: [],          // {date, name, protein, cals}
   activities: [],     // {date, name, min, kcal}
@@ -744,6 +772,13 @@ function weekOf(dateStr){
   const d = new Date(dateStr+"T00:00:00");
   return Math.floor((d-start)/(7*24*3600*1000))+1;
 }
+function weekDateRange(w){
+  if (!S.profile.startDate) return null;
+  const start = new Date(S.profile.startDate+"T00:00:00");
+  const wkStart = new Date(start); wkStart.setDate(start.getDate()+(w-1)*7);
+  const wkEnd = new Date(wkStart); wkEnd.setDate(wkStart.getDate()+6);
+  return [wkStart, wkEnd];
+}
 function weekProgress(w){
   const spec = weekSpec(w);
   const total = spec.strength.length + spec.walks;
@@ -1019,8 +1054,148 @@ function addWeight(){
   renderProgress(); renderDashboard();
 }
 function delWeight(date){ S.weights = S.weights.filter(w=>w.date!==date); save(); renderProgress(); renderDashboard(); }
+function saveGoalWeight(){
+  const v = parseFloat(document.getElementById("goalWeightInput").value);
+  S.profile.goalWeight = v || null;
+  save();
+  renderGoalsProgress();
+}
+function ymd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function last30Dates(){
+  const arr=[]; const now=new Date();
+  for(let i=29;i>=0;i--){ const d=new Date(now); d.setDate(d.getDate()-i); arr.push(ymd(d)); }
+  return arr;
+}
+function renderGoalsProgress(){
+  const el = document.getElementById("goalsSummary");
+  const days = last30Dates();
+  const [pLo] = proteinRange();
+  let daysWithMeals = 0, daysHitGoal = 0;
+  days.forEach(d=>{
+    const p = S.meals.filter(m=>m.date===d).reduce((a,m)=>a+(+m.protein||0),0);
+    if (p>0){ daysWithMeals++; if (p>=pLo) daysHitGoal++; }
+  });
+  const proteinPct = daysWithMeals ? Math.round(daysHitGoal/daysWithMeals*100) : 0;
+
+  let sessDone=0, sessTotal=0;
+  const cw = currentWeek();
+  for (let w=1; w<=cw; w++){ const prog = weekProgress(w); sessDone += prog.done; sessTotal += prog.total; }
+  const sessPct = sessTotal ? Math.round(sessDone/sessTotal*100) : 0;
+
+  const lw = latestWeight();
+  const goal = S.profile.goalWeight;
+  let weightBlock;
+  if (goal){
+    const start = S.profile.startWeight || lw;
+    const totalToLose = start - goal;
+    const doneSoFar = start - lw;
+    const pct = totalToLose !== 0 ? Math.max(0, Math.min(100, Math.round(doneSoFar/totalToLose*100))) : 100;
+    const remaining = Math.abs(lw-goal);
+    weightBlock =
+      '<div class="bar-outer"><div class="bar-inner'+(pct>=100?" gold":"")+'" style="width:'+pct+'%"></div></div>'+
+      '<p style="font-size:.9rem;color:var(--muted)">'+lw.toFixed(1)+' lb now → goal '+goal.toFixed(1)+' lb ('+remaining.toFixed(1)+' lb to go, '+pct+'% of the way there)</p>';
+  } else {
+    weightBlock = '<p style="font-size:.85rem;color:var(--muted)">Set a goal weight in the Weight Tracking card below to track progress toward it.</p>';
+  }
+  el.innerHTML =
+    '<div class="statrow">'+
+      stat(proteinPct+"%","Protein goal met (last 30 days)")+
+      stat(sessPct+"%","Plan sessions completed so far")+
+      stat(goal ? Math.abs(lw-goal).toFixed(1)+" lb" : "—","To goal weight")+
+    '</div>'+ weightBlock;
+}
+function renderCompletedActivities(){
+  const el = document.getElementById("completedActivities");
+  if (!S.profile.startDate){ el.innerHTML = '<p style="color:var(--muted);font-size:.9rem">Set up your plan to start tracking completed sessions.</p>'; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const cutoff = new Date(today); cutoff.setDate(cutoff.getDate()-29);
+  let html = "";
+  for (let w=1; w<=totalWeeks(); w++){
+    const range = weekDateRange(w);
+    if (!range) continue;
+    const [wkStart, wkEnd] = range;
+    if (wkEnd < cutoff || wkStart > today) continue; // outside the last 30 days
+    const spec = weekSpec(w);
+    const items = [];
+    spec.strength.forEach((code,i)=>{ if (S.checks["w"+w+"-s"+i]) items.push(SESSIONS[code].title); });
+    let cardioCount = 0;
+    for (let i=0;i<spec.walks;i++){ if (S.checks["w"+w+"-c"+i]) cardioCount++; }
+    if (!items.length && !cardioCount) continue;
+    html += '<div class="docq"><div class="q">Week '+w+' ('+fmtDate(ymd(wkStart))+'–'+fmtDate(ymd(wkEnd))+')</div>'+
+      (items.length ? '<ul class="exlist">'+items.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul>' : '') +
+      (cardioCount ? '<p style="font-size:.88rem;color:var(--muted);margin-top:4px">+ '+cardioCount+' walk/bike session'+(cardioCount>1?"s":"")+'</p>' : '') +
+      '</div>';
+  }
+  el.innerHTML = html || '<p style="color:var(--muted);font-size:.9rem">No completed sessions in the last 30 days yet.</p>';
+}
+function renderMealLog30(){
+  const el = document.getElementById("mealLog30");
+  const days = last30Dates();
+  const meals = S.meals.filter(m=>days.includes(m.date)).sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
+  el.innerHTML = meals.length ?
+    '<table><thead><tr><th>Date</th><th>Meal</th><th>Protein</th><th>Cal</th></tr></thead><tbody>'+
+    meals.map(m=>'<tr><td>'+fmtDate(m.date)+'</td><td>'+esc(m.name)+'</td><td>'+m.protein+' g</td><td>'+m.cals+'</td></tr>').join("")+
+    '</tbody></table>' : '<p style="color:var(--muted);font-size:.9rem">No meals logged in the last 30 days.</p>';
+}
+function renderActivityLog30(){
+  const el = document.getElementById("activityLog30");
+  const days = last30Dates();
+  const acts = S.activities.filter(a=>days.includes(a.date)).sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
+  el.innerHTML = acts.length ?
+    '<table><thead><tr><th>Date</th><th>Activity</th><th>Min</th><th>Cal</th></tr></thead><tbody>'+
+    acts.map(a=>'<tr><td>'+fmtDate(a.date)+'</td><td>'+esc(a.name)+'</td><td>'+a.min+'</td><td>'+a.kcal+'</td></tr>').join("")+
+    '</tbody></table>' : '<p style="color:var(--muted);font-size:.9rem">No activities logged in the last 30 days.</p>';
+}
+function buildSummaryText(){
+  const days = last30Dates();
+  const [pLo,pHi] = proteinRange();
+  let daysWithMeals=0, daysHitGoal=0, totalProtein=0;
+  days.forEach(d=>{
+    const p = S.meals.filter(m=>m.date===d).reduce((a,m)=>a+(+m.protein||0),0);
+    if (p>0){ daysWithMeals++; totalProtein+=p; if (p>=pLo) daysHitGoal++; }
+  });
+  const avgProtein = daysWithMeals ? Math.round(totalProtein/daysWithMeals) : 0;
+  const proteinPct = daysWithMeals ? Math.round(daysHitGoal/daysWithMeals*100) : 0;
+
+  let sessDone=0, sessTotal=0;
+  const cw = currentWeek();
+  for (let w=1; w<=cw; w++){ const prog = weekProgress(w); sessDone+=prog.done; sessTotal+=prog.total; }
+  const sessPct = sessTotal ? Math.round(sessDone/sessTotal*100) : 0;
+
+  const lw = latestWeight();
+  const sw = S.profile.startWeight || lw;
+  const goal = S.profile.goalWeight;
+  const change = lw - sw;
+
+  const lines = [];
+  lines.push("Activity + Nutrition Summary");
+  lines.push("Generated "+fmtDate(todayStr())+" · Last 30 days");
+  lines.push("");
+  lines.push("WEIGHT");
+  lines.push("Starting: "+sw.toFixed(1)+" lb");
+  lines.push("Current: "+lw.toFixed(1)+" lb ("+(change>0?"+":"")+change.toFixed(1)+" lb change)");
+  if (goal) lines.push("Goal: "+goal.toFixed(1)+" lb ("+Math.abs(lw-goal).toFixed(1)+" lb remaining)");
+  lines.push("");
+  lines.push("NUTRITION (last 30 days)");
+  lines.push("Daily protein goal: "+pLo+"–"+pHi+" g");
+  lines.push("Met goal on "+daysHitGoal+" of "+daysWithMeals+" logged days ("+proteinPct+"%)");
+  if (daysWithMeals) lines.push("Average daily protein on logged days: "+avgProtein+" g");
+  lines.push("");
+  lines.push("EXERCISE");
+  lines.push(sessDone+" of "+sessTotal+" planned sessions completed so far ("+sessPct+"%)");
+  lines.push("");
+  lines.push("This summary was generated by the Activity + Nutrition Tracker.");
+  return lines.join("\n");
+}
+function emailSummary(){
+  const to = document.getElementById("summaryRecipient").value.trim();
+  const subject = "Activity + Nutrition Summary — "+fmtDate(todayStr());
+  const body = buildSummaryText();
+  window.location.href = "mailto:"+encodeURIComponent(to)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+}
 function renderProgress(){
   if (!document.getElementById("wtDate").value) document.getElementById("wtDate").value = todayStr();
+  document.getElementById("goalWeightInput").value = S.profile.goalWeight || "";
   const ws = S.weights;
   const statsEl = document.getElementById("wtStats");
   if (ws.length){
@@ -1035,6 +1210,10 @@ function renderProgress(){
   drawProteinChart();
   drawCalsChart();
   drawWorkoutsChart();
+  renderGoalsProgress();
+  renderCompletedActivities();
+  renderMealLog30();
+  renderActivityLog30();
 }
 /* ---------- Canvas chart helpers ---------- */
 function setupCanvas(id){
