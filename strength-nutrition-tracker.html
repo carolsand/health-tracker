@@ -538,11 +538,15 @@ async function refreshFromServer(){
     const r = await fetch("/api/state");
     if (r.status === 401){ showLogin(); return; }
     if (!r.ok) return;
-    S = await r.json();
+    // Merge onto DEFAULT_STATE (not a bare assignment) so accounts saved before a field
+    // existed (e.g. customWorkouts) still get that field's default instead of undefined,
+    // which would otherwise throw partway through renderAll() and silently abort this
+    // whole function before loadSessionInfo() ever runs.
+    S = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), await r.json());
     cacheLocally();
     renderAll();
     loadSessionInfo();
-  } catch(e){ /* offline — keep using the locally cached state already on screen */ }
+  } catch(e){ console.error("refreshFromServer failed:", e); /* keep using the locally cached state already on screen */ }
 }
 
 /* ---------- Session info (username, admin status) ---------- */

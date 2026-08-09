@@ -19,7 +19,9 @@ const DEFAULT_STATE = {
 
 router.get("/state", requireAuth, (req, res) => {
   const row = db.prepare("SELECT state_json FROM user_state WHERE user_id = ?").get(req.session.userId);
-  res.json(row ? JSON.parse(row.state_json) : DEFAULT_STATE);
+  // Merge onto DEFAULT_STATE so accounts saved before a field existed (e.g. customWorkouts)
+  // still get that field's default instead of it being entirely absent from the response.
+  res.json(row ? Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), JSON.parse(row.state_json)) : DEFAULT_STATE);
 });
 
 router.put("/state", requireAuth, (req, res) => {
