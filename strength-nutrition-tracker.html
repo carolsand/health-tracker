@@ -361,6 +361,8 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
   <div class="card">
     <h2>Protein Quick-Reference</h2>
     <p style="font-size:.85rem;color:var(--muted)">Browse protein and calories for common foods.</p>
+    <div id="foodRefPlanSelector" class="planPills"></div>
+    <p id="foodRefHint" style="font-size:.85rem;color:var(--muted)"></p>
     <details id="foodRefDetails">
       <summary>Show reference table (<span id="foodRefCount"></span> foods)</summary>
       <div id="foodRefControlsTop"></div>
@@ -1957,6 +1959,7 @@ function setActivePlan(id){
   renderProgress();
   renderPlanSelector("calcPlanSelector");
   renderRecipes();
+  renderFoodTable();
 }
 function renderExercise(){
   if (!document.getElementById("workoutDate").value) document.getElementById("workoutDate").value = todayStr();
@@ -2252,11 +2255,31 @@ function foodRefPagerHtml(totalPages){
     '<button '+(foodRefPage>=totalPages?"disabled":"")+' onclick="setFoodRefPage('+(foodRefPage+1)+')">Next ›</button>'+
     '</div>';
 }
+// FOODS has no macro/carb breakdown, so this is a heuristic, not a curated tag list like RECIPES.goodFor
+// (504 foods makes manual tagging impractical): protein-focused plans sort by protein per serving;
+// endurance plans sort by non-protein calories (a rough carb/fat energy proxy) to surface fuel-dense options.
+function isEnduranceType(type){ return !!RACE_TYPES[type] || type==="cardio"; }
+function proteinRefSort(plan){
+  if (!plan) return FOODS;
+  const copy = FOODS.slice();
+  if (isEnduranceType(plan.type)) copy.sort((a,b)=> (b.cals-b.protein*4) - (a.cals-a.protein*4));
+  else copy.sort((a,b)=> b.protein-a.protein);
+  return copy;
+}
 function renderFoodTable(){
   document.getElementById("foodRefCount").textContent = FOODS.length;
-  const totalPages = Math.max(1, Math.ceil(FOODS.length/FOODREF_PER_PAGE));
+  renderPlanSelector("foodRefPlanSelector");
+  const plan = ensureActivePlan();
+  const hintEl = document.getElementById("foodRefHint");
+  if (hintEl){
+    hintEl.textContent = !plan ? "" : (isEnduranceType(plan.type) ?
+      "Sorted for energy-dense fuel options — good for your "+TYPE_LABELS[plan.type]+" plan." :
+      "Sorted by protein for your "+TYPE_LABELS[plan.type]+" plan.");
+  }
+  const sorted = proteinRefSort(plan);
+  const totalPages = Math.max(1, Math.ceil(sorted.length/FOODREF_PER_PAGE));
   if (foodRefPage>totalPages) foodRefPage = totalPages;
-  const pageItems = FOODS.slice((foodRefPage-1)*FOODREF_PER_PAGE, foodRefPage*FOODREF_PER_PAGE);
+  const pageItems = sorted.slice((foodRefPage-1)*FOODREF_PER_PAGE, foodRefPage*FOODREF_PER_PAGE);
   const pager = foodRefPagerHtml(totalPages);
   document.getElementById("foodRefControlsTop").innerHTML = pager;
   document.getElementById("foodRefControlsBottom").innerHTML = pager;
