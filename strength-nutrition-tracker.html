@@ -51,6 +51,10 @@ tr.tapRow{cursor:pointer}
 tr.tapRow:hover td{background:var(--accent-light)}
 .chip{display:inline-block;background:var(--plum-light);color:var(--plum);border:1px solid var(--plum);border-radius:20px;padding:5px 12px;font-size:.83rem;margin:3px;cursor:pointer;font-weight:600}
 .chip:hover{background:var(--plum);color:#fff}
+.planPills{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+.planpill{border:none}
+.rcard.plancard{transition:box-shadow .15s}
+.rcard.plancard:hover{box-shadow:0 3px 10px rgba(0,0,0,.08)}
 .suggestList{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-height:260px;overflow-y:auto;z-index:20;margin-top:4px}
 .suggestList .sitem{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
 .suggestList .sitem:last-child{border-bottom:none}
@@ -209,27 +213,51 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <main>
 <!-- ============ DASHBOARD ============ -->
 <section class="tab active" id="tab-dashboard">
-  <div class="card" id="setupCard" style="display:none">
-    <h2>Welcome! Let's Set Up Your Plan</h2>
-    <p style="font-size:.92rem;color:var(--muted)">Enter your details once — everything else calculates automatically. You can change these anytime in Calculators.</p>
+  <div class="card" id="basicsCard" style="display:none">
+    <h2>Your Basics</h2>
+    <p style="font-size:.92rem;color:var(--muted)">Enter these once — every plan's targets calculate from them. You can change these anytime in Calculators.</p>
     <div class="flexrow">
-      <div><label>Plan start date</label><input type="date" id="setupStart"></div>
-      <div><label>Current weight (lb)</label><input type="number" id="setupWeight" min="80" max="400" step="0.1"></div>
-      <div><label>Height (inches)</label><input type="number" id="setupHeight" min="48" max="80"></div>
-      <div><label>Age</label><input type="number" id="setupAge" min="18" max="100"></div>
+      <div><label>Current weight (lb)</label><input type="number" id="basicsWeight" min="80" max="400" step="0.1"></div>
+      <div><label>Height (inches)</label><input type="number" id="basicsHeight" min="48" max="80"></div>
+      <div><label>Age</label><input type="number" id="basicsAge" min="18" max="100"></div>
     </div>
-    <button class="btn" onclick="finishSetup()">Start my plan</button>
+    <button class="btn" onclick="finishBasics()">Save my basics</button>
   </div>
-  <div id="dashContent"></div>
+  <div class="card">
+    <h2>Start A New Plan</h2>
+    <p style="font-size:.9rem;color:var(--muted)">Tell us what you're working toward and we'll generate an activity + nutrition plan for it. You can run more than one plan at a time.</p>
+    <button class="btn ghost" id="newPlanToggleBtn" onclick="toggleNewPlanForm()">+ New plan</button>
+    <div id="newPlanForm" style="display:none;margin-top:12px">
+      <div class="flexrow">
+        <div style="flex:2"><label>Plan type</label>
+          <select id="npType" onchange="renderPlanTypeFields()">
+            <option value="weightloss">Weight loss</option>
+            <option value="musclegain">Muscle gain</option>
+            <option value="cardio">Cardio / general endurance</option>
+            <option value="ability">Plan based on my abilities</option>
+            <option value="marathon">Preparing for a marathon</option>
+            <option value="fitnesstest">Preparing for a fitness test</option>
+            <option value="competition">Preparing for a competition</option>
+          </select>
+        </div>
+        <div style="flex:2"><label>Plan name (optional)</label><input type="text" id="npName" placeholder="e.g., Fall marathon, Summer cut"></div>
+        <div><label>Plan start date</label><input type="date" id="npStart"></div>
+      </div>
+      <div id="npTypeFields"></div>
+      <button class="btn" onclick="createPlan()">Start my plan</button>
+    </div>
+  </div>
+  <div id="plansGrid" class="rgrid"></div>
 </section>
 
 <!-- ============ EXERCISE ============ -->
 <section class="tab" id="tab-exercise">
   <div class="card">
-    <h2>Your Week-By-Week Plan</h2>
-    <p style="font-size:.9rem;color:var(--muted)">Check off each session as you complete it. Weeks keep going past week 8 — the plan extends automatically, and you can add more with the button at the bottom.</p>
-    <div class="note"><b>Progressive overload rule:</b> when all rounds and reps feel easy with good form, increase the weight at your next session. Your equipment: Rogue rack &amp; barbell, dumbbells, kettlebells, leg machine, stationary bike, 12-lb med ball, bands, foam rollers.</div>
-    <div class="warnnote"><b>🦵 Knee-recovery rules (apply to every session):</b> warm up on the bike first · work only in a pain-free range · box squats limit your depth — use them · skip leg extensions for now · never foam-roll the knee joint itself · mild muscle soreness is fine, sharp or swelling-type knee pain means stop. Have your doctor or physical therapist confirm this plan fits your specific injury.</div>
+    <h2 id="exercisePlanTitle">Your Week-By-Week Plan</h2>
+    <p style="font-size:.9rem;color:var(--muted)">Check off each session as you complete it. Weeks keep going past the base length — the plan extends automatically, and you can add more with the button at the bottom.</p>
+    <div id="exercisePlanSelector" class="planPills"></div>
+    <div class="note" id="exerciseNote"><b>Progressive overload rule:</b> when all rounds and reps feel easy with good form, increase the weight at your next session. Your equipment: Rogue rack &amp; barbell, dumbbells, kettlebells, leg machine, stationary bike, 12-lb med ball, bands, foam rollers.</div>
+    <div class="warnnote" id="exerciseWarnnote" style="display:none"></div>
   </div>
   <div id="weeksList"></div>
   <button class="btn ghost" onclick="addWeek()">＋ Add another week</button>
@@ -374,6 +402,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <section class="tab" id="tab-calc">
   <div class="card">
     <h2>Your Numbers</h2>
+    <div id="calcPlanSelector" class="planPills"></div>
     <div class="flexrow">
       <div><label>Age</label><input type="number" id="cAge" min="18" max="100"></div>
       <div><label>Height (in)</label><input type="number" id="cHeight" min="48" max="80"></div>
@@ -381,8 +410,8 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
       <div><label>Activity level</label>
         <select id="cActivity">
           <option value="1.2">Mostly sitting</option>
-          <option value="1.375" selected>Light (this plan, weeks 1–2)</option>
-          <option value="1.55">Moderate (this plan, weeks 3+)</option>
+          <option value="1.375" selected>Light activity</option>
+          <option value="1.55">Moderate activity</option>
           <option value="1.725">Very active</option>
         </select>
       </div>
@@ -409,6 +438,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 <section class="tab" id="tab-progress">
   <div class="card">
     <h2>Progress Toward Your Goals</h2>
+    <div id="progressPlanSelector" class="planPills"></div>
     <div id="goalsSummary"></div>
   </div>
   <div class="card">
@@ -507,10 +537,11 @@ const DEFAULT_STATE = {
   weights: [],        // {date, lbs}
   meals: [],          // {date, name, protein, cals}
   activities: [],     // {date, name, min, kcal}
-  checks: {},         // "w3-s1": true
+  checks: {},         // legacy flat map, "w3-s1": true -- kept only so migrateLegacyPlan() can read pre-plans accounts
   pantry: [],         // ingredient strings
   customWorkouts: [], // {id, date, name, exercises:[{name,sets,reps,weight,notes}]}
-  extraWeeks: 0,
+  plans: [],          // {id, name, type, color:{bg,text}, createdAt, startDate, checks:{}, extraWeeks, config:{}}
+  extraWeeks: 0,      // legacy global counter -- kept only so migrateLegacyPlan() can read pre-plans accounts
   doctor: { answers: {}, custom: [], apptDate: "" }
 };
 let S = loadState();
@@ -543,6 +574,7 @@ async function refreshFromServer(){
     // which would otherwise throw partway through renderAll() and silently abort this
     // whole function before loadSessionInfo() ever runs.
     S = Object.assign(JSON.parse(JSON.stringify(DEFAULT_STATE)), await r.json());
+    migrateLegacyPlan();
     cacheLocally();
     renderAll();
     loadSessionInfo();
@@ -712,87 +744,344 @@ function importData(ev){
 }
 
 /* ---------- Plan data ---------- */
-const SESSIONS = {
-  A1:{ title:"Session A — Lower Body + Core", ex:[
-    ["Warm-up: easy stationary bike","8 min, light resistance — the best knee prep there is"],
-    ["Box squat (to a bench/box set in your rack)","10 reps — sit back, only as deep as stays pain-free"],
-    ["Glute bridge (squeeze med ball between knees)","10 reps — hold 2 sec at top"],
-    ["Leg machine: hamstring curl OR leg press","10 reps, light, pain-free range only — skip leg extensions for now (high knee stress)"],
-    ["Side-lying clamshell","10 each side"],
-    ["Dead bug","5 each side — lower back stays flat"],
-    ["Calf raises (hold the rack)","12 reps — slow lowering"],
-    ["Cool-down: foam roll","Quads, hamstrings, calves, glutes 30–60 sec each — never roll directly on the knee joint"]
-  ], rounds:"2 rounds" },
-  B1:{ title:"Session B — Upper Body + Posture", ex:[
-    ["Warm-up: easy bike","5 min"],
-    ["Dumbbell floor or bench press (light)","10 reps"],
-    ["One-arm dumbbell row (hand braced on bench)","10 each side"],
-    ["Seated dumbbell overhead press","10 reps"],
-    ["Band pull-apart","12 reps — squeeze shoulder blades"],
-    ["Med-ball squeeze press","10 reps — press the 12-lb ball hard between your palms at chest height"],
-    ["Plank hold (on knees)","20–30 sec"],
-    ["Cool-down: foam roll upper back","1–2 min, arms crossed"]
-  ], rounds:"2 rounds" },
-  A2:{ title:"Session A — Lower Body + Core", ex:[
-    ["Warm-up: bike","8–10 min, add a little resistance"],
-    ["Kettlebell goblet box squat","10 reps — hold KB at chest, depth stays pain-free"],
-    ["Leg press (machine)","10 reps — moderate weight, stop well short of a deep knee bend"],
-    ["Kettlebell Romanian deadlift","10 reps — hips back, soft knees, feel the hamstrings"],
-    ["Machine hamstring curl","10 reps, light"],
-    ["Step-up to LOW step","8 each side — only if the knee is quiet; otherwise sub glute bridge march"],
-    ["Med-ball dead bug","6 each side — hold the ball above your chest"],
-    ["Calf raises holding dumbbells","12 reps"],
-    ["Cool-down: foam roll legs","skip the knee itself"]
-  ], rounds:"3 rounds" },
-  B2:{ title:"Session B — Upper Body + Posture", ex:[
-    ["Warm-up: easy bike","5 min"],
-    ["Dumbbell bench press","10 reps"],
-    ["Bent-over dumbbell row","10 each side"],
-    ["Seated overhead press (dumbbell or kettlebell)","10 reps"],
-    ["Kettlebell halo","8 circles each direction — slow, ribs down"],
-    ["Band pull-apart","12 reps"],
-    ["Full plank (hands & toes)","20–30 sec"],
-    ["Cool-down: foam roll upper back + lats","1–2 min"]
-  ], rounds:"3 rounds" },
-  T2:{ title:"Technique + Recovery Day — light", ex:[
-    ["Easy bike","15–20 min, conversational pace"],
-    ["1 light round of Sessions A + B","Week-2 weights, slower tempo, focus on form"],
-    ["Full foam-rolling session","~10 min: quads, hamstrings, calves, glutes, upper back — never the knee joint"]
-  ], rounds:"1 round" },
-  A3:{ title:"Session A — Lower Body + Carry", ex:[
-    ["Warm-up: bike","10 min"],
-    ["Barbell box squat in the rack","10–12 reps — empty or light bar, safety pins set, depth pain-free"],
-    ["Leg press","10–12 reps — progress the weight, keep the range comfortable"],
-    ["Romanian deadlift (barbell or heavy kettlebell)","10–12 reps"],
-    ["Hip thrust (upper back on bench, dumbbell or light bar on hips)","10–12 reps"],
-    ["Kettlebell farmer's carry","20 steps × 3 — one KB each hand, tall posture"],
-    ["Machine hamstring curl","12 reps"],
-    ["Cool-down: foam roll legs","skip the knee"]
-  ], rounds:"3 rounds" },
-  B3:{ title:"Session B — Upper Body + Posture", ex:[
-    ["Warm-up: easy bike","5 min"],
-    ["Bench press (dumbbells or light barbell)","10–12 reps"],
-    ["Barbell bent-over row (light) or heavy dumbbell row","10–12 reps"],
-    ["Overhead press (dumbbells, kettlebell, or empty bar)","10–12 reps"],
-    ["Kettlebell halo","8 each direction"],
-    ["Med-ball Russian twist (seated, feet on floor)","10 each side — heels stay down to spare the knee"],
-    ["Band pull-apart","12–15 reps"],
-    ["Plank 40–50 sec + side plank","20 sec each side"]
-  ], rounds:"3 rounds" }
+const PLAN_COLORS = [
+  { bg:"#e5eaf6", text:"#0549e1" }, // royal blue (app accent)
+  { bg:"#f5f1e5", text:"#8e6d0b" }, // mustard (app secondary)
+  { bg:"#e3f2ea", text:"#1b6e4f" }, // green
+  { bg:"#f3e8fb", text:"#7a3fa0" }, // purple
+  { bg:"#fdeee3", text:"#b35900" }, // orange
+  { bg:"#fbe7e7", text:"#b83232" }, // red
+  { bg:"#e6f7f5", text:"#0f7a72" }, // teal
+  { bg:"#e6f0fb", text:"#1c5fa8" }  // sky blue
+];
+const TYPE_LABELS = {
+  weightloss: "Weight Loss", musclegain: "Muscle Gain", cardio: "Cardio",
+  ability: "Based On My Abilities", marathon: "Marathon Prep",
+  fitnesstest: "Fitness Test Prep", competition: "Competition Prep"
 };
-function weekSpec(w){
-  if (w<=2) return { phase:"Phase 1 · Foundation", cls:"", strength:["A1","B1"], walks:3, walkMin:20, tip:"Learn the movements and protect the knee: bike before every session, pain-free range only, stop at any sharp pain." };
-  if (w<=5) return { phase:"Phase 2 · Load", cls:"p2", strength:["A2","B2","T2"], walks:5, walkMin:30, tip:"Add weight one step at a time when 2 rounds of 10 feel manageable. The knee sets the pace — step-ups and leg press only if pain-free." };
-  if (w<=8) return { phase:"Phase 3 · Build", cls:"p3", strength:["A3","B3","A3"], walks:5, walkMin:30, tip:"3 rounds of 10–12. Barbell work stays light until the knee is fully cleared. When all rounds feel easy, go heavier next session." };
-  return { phase:"Maintenance · Keep Progressing", cls:"pm", strength:["A3","B3","A3"], walks:5, walkMin:30, tip:"Keep the Phase 3 structure and keep nudging the weights up. Once your knee is cleared by your doctor or PT, ask about adding kettlebell swings and deeper squats." };
+// Weeks between plan.startDate and plan.config[dateField], clamped to [lo,hi] -- used by the
+// three "countdown to an event" plan types (marathon/fitnesstest/competition) instead of the
+// simple "weeks since start" used by the other types.
+function weeksUntil(plan, dateField, lo, hi){
+  const target = plan.config && plan.config[dateField];
+  if (!target) return hi;
+  const start = new Date(plan.startDate+"T00:00:00");
+  const end = new Date(target+"T00:00:00");
+  const wk = Math.round((end-start)/(7*24*3600*1000));
+  return Math.max(lo, Math.min(hi, wk||lo));
 }
-function currentWeek(){
-  if (!S.profile.startDate) return 1;
-  const start = new Date(S.profile.startDate+"T00:00:00");
+const PROGRAM_TEMPLATES = {
+  weightloss: {
+    sessions: {
+      F1:{ title:"Full-Body A", ex:[
+        ["Warm-up: brisk walk or bike","5 min"],
+        ["Squat (bodyweight or goblet)","10 reps"],
+        ["Push-up (or incline push-up)","10 reps"],
+        ["Bent-over row (dumbbell or band)","10 each side"],
+        ["Plank","20–30 sec"]
+      ], rounds:"2–3 rounds" },
+      F2:{ title:"Full-Body B", ex:[
+        ["Warm-up: brisk walk or bike","5 min"],
+        ["Romanian deadlift (dumbbell or kettlebell)","10 reps"],
+        ["Overhead press","10 reps"],
+        ["Reverse lunge","8 each side"],
+        ["Side plank","15–20 sec each side"]
+      ], rounds:"2–3 rounds" },
+      F3:{ title:"Full-Body C", ex:[
+        ["Warm-up: brisk walk or bike","5 min"],
+        ["Step-up","10 each side"],
+        ["Dumbbell bench press or push-up","10 reps"],
+        ["Single-arm row","10 each side"],
+        ["Dead bug","8 each side"]
+      ], rounds:"3 rounds" }
+    },
+    weekSpec(plan,w){
+      if (w<=2) return { phase:"Phase 1 · Foundation", cls:"", strength:["F1","F2"], walks:3, walkMin:20, tip:"Learn the movements with light weight, focus on form." };
+      if (w<=5) return { phase:"Phase 2 · Load", cls:"p2", strength:["F1","F2","F3"], walks:4, walkMin:25, tip:"Add weight or reps once a session feels easy." };
+      if (w<=8) return { phase:"Phase 3 · Build", cls:"p3", strength:["F1","F2","F3"], walks:5, walkMin:30, tip:"Push the pace on cardio days — aim for a little breathless." };
+      return { phase:"Maintenance · Keep Progressing", cls:"pm", strength:["F1","F2","F3"], walks:5, walkMin:30, tip:"Keep progressing weight and cardio duration as it gets easier." };
+    },
+    nutrition(bmr,tdee,kgW,plan){
+      const pace = (plan.config && plan.config.pace) || 1;
+      const target = tdee - Math.round(pace*500);
+      return {
+        rows:[[bmr,"BMR (cal/day at rest)"],[tdee,"Maintenance (TDEE)"],[target,"Eat this → lose ~"+pace+" lb/wk"]],
+        proteinLo: Math.round(kgW*1.2), proteinHi: Math.round(kgW*1.6),
+        note:"split into 3–4 meals of 25–35 g, to preserve muscle in a deficit",
+        warn:"Avoid going below ~1,200 calories/day without medical supervision — aggressive cuts accelerate muscle loss after menopause, which works against you."
+      };
+    }
+  },
+  musclegain: {
+    sessions: {
+      FB1:{ title:"Full-Body — Learn The Lifts", ex:[
+        ["Warm-up","5 min easy cardio"],
+        ["Goblet squat","10 reps"],
+        ["Dumbbell bench press","10 reps"],
+        ["Bent-over row","10 reps"],
+        ["Plank","30 sec"]
+      ], rounds:"2 rounds" },
+      PUSH:{ title:"Push — Chest/Shoulders/Triceps", ex:[
+        ["Warm-up","5 min"],["Bench press","4 sets × 8"],["Overhead press","3 sets × 10"],
+        ["Incline dumbbell press","3 sets × 10"],["Tricep extension","3 sets × 12"]
+      ], rounds:"see sets above" },
+      PULL:{ title:"Pull — Back/Biceps", ex:[
+        ["Warm-up","5 min"],["Bent-over row","4 sets × 8"],["Lat pulldown or pull-up","3 sets × 8"],
+        ["Seated cable row","3 sets × 10"],["Bicep curl","3 sets × 12"]
+      ], rounds:"see sets above" },
+      LEGS:{ title:"Legs", ex:[
+        ["Warm-up","5 min"],["Squat","4 sets × 8"],["Romanian deadlift","3 sets × 10"],
+        ["Leg press","3 sets × 10"],["Calf raise","3 sets × 15"]
+      ], rounds:"see sets above" },
+      UPPER:{ title:"Upper Body", ex:[
+        ["Warm-up","5 min"],["Bench press","3 sets × 8"],["Bent-over row","3 sets × 8"],
+        ["Overhead press","3 sets × 10"],["Bicep curl + tricep extension superset","3 sets × 12"]
+      ], rounds:"see sets above" },
+      LOWER:{ title:"Lower Body", ex:[
+        ["Warm-up","5 min"],["Squat","3 sets × 8"],["Romanian deadlift","3 sets × 10"],
+        ["Walking lunge","3 sets × 10 each"],["Calf raise","3 sets × 15"]
+      ], rounds:"see sets above" }
+    },
+    weekSpec(plan,w){
+      if (w<=2) return { phase:"Phase 1 · Foundation", cls:"", strength:["FB1","FB1"], walks:2, walkMin:20, tip:"Learn each lift with moderate weight before adding load." };
+      if (w<=8) return { phase:"Phase 2 · Push/Pull/Legs", cls:"p2", strength:["PUSH","PULL","LEGS"], walks:2, walkMin:20, tip:"Add weight when you can complete all sets at the top of the rep range." };
+      return { phase:"Phase 3 · Upper/Lower Split", cls:"p3", strength:["UPPER","LOWER","UPPER","LOWER"], walks:2, walkMin:20, tip:"Progress load steadily — small increases beat big jumps." };
+    },
+    nutrition(bmr,tdee,kgW,plan){
+      const goal = (plan.config && plan.config.goal) || "lean";
+      const surplus = goal==="standard" ? 500 : 250;
+      const target = tdee + surplus;
+      return {
+        rows:[[bmr,"BMR (cal/day at rest)"],[tdee,"Maintenance (TDEE)"],[target,"Eat this → "+(goal==="standard"?"standard":"lean")+" muscle gain"]],
+        proteinLo: Math.round(kgW*1.6), proteinHi: Math.round(kgW*2.2),
+        note:"muscle-building range, split into 3–4 meals of 25–40 g",
+        warn:"Too large a surplus adds fat faster than muscle — if the scale is climbing more than ~1 lb/week, dial the surplus back."
+      };
+    }
+  },
+  cardio: {
+    sessions: {
+      MAINT1:{ title:"Maintenance Strength A", ex:[
+        ["Warm-up","5 min"],["Squat","10 reps"],["Push-up","10 reps"],["Row","10 reps"],["Plank","30 sec"]
+      ], rounds:"2 rounds" },
+      MAINT2:{ title:"Maintenance Strength B", ex:[
+        ["Warm-up","5 min"],["Lunge","8 each side"],["Overhead press","10 reps"],["Deadlift pattern","10 reps"],["Side plank","20 sec each side"]
+      ], rounds:"2 rounds" }
+    },
+    weekSpec(plan,w){
+      const baseline = (plan.config && plan.config.baselineMin) || 20;
+      if (w<=2) return { phase:"Phase 1 · Base", cls:"", strength:["MAINT1"], walks:4, walkMin:baseline, tip:"Build a consistent habit before increasing volume." };
+      if (w<=5) return { phase:"Phase 2 · Build", cls:"p2", strength:["MAINT1","MAINT2"], walks:5, walkMin:Math.round(baseline*1.25), tip:"Add one longer endurance session this phase." };
+      if (w<=8) return { phase:"Phase 3 · Push", cls:"p3", strength:["MAINT1","MAINT2"], walks:5, walkMin:Math.round(baseline*1.5), tip:"Mix easy days with 1–2 harder efforts." };
+      return { phase:"Maintenance", cls:"pm", strength:["MAINT1","MAINT2"], walks:5, walkMin:Math.round(baseline*1.5), tip:"Hold this volume, or keep building if you have a goal event." };
+    },
+    nutrition(bmr,tdee,kgW,plan){
+      return {
+        rows:[[bmr,"BMR (cal/day at rest)"],[tdee,"Maintenance (TDEE)"],[tdee,"Eat this → maintain weight while training"]],
+        proteinLo: Math.round(kgW*1.2), proteinHi: Math.round(kgW*1.6),
+        note:"spread through the day, extra carbs around longer sessions",
+        warn:"Underfueling is the more common mistake with cardio-focused training — don't chronically eat below maintenance while ramping up volume."
+      };
+    }
+  },
+  ability: {
+    // Preserved verbatim from the app's original single-plan knee-recovery program.
+    sessions: {
+      A1:{ title:"Session A — Lower Body + Core", ex:[
+        ["Warm-up: easy stationary bike","8 min, light resistance — the best knee prep there is"],
+        ["Box squat (to a bench/box set in your rack)","10 reps — sit back, only as deep as stays pain-free"],
+        ["Glute bridge (squeeze med ball between knees)","10 reps — hold 2 sec at top"],
+        ["Leg machine: hamstring curl OR leg press","10 reps, light, pain-free range only — skip leg extensions for now (high knee stress)"],
+        ["Side-lying clamshell","10 each side"],
+        ["Dead bug","5 each side — lower back stays flat"],
+        ["Calf raises (hold the rack)","12 reps — slow lowering"],
+        ["Cool-down: foam roll","Quads, hamstrings, calves, glutes 30–60 sec each — never roll directly on the knee joint"]
+      ], rounds:"2 rounds" },
+      B1:{ title:"Session B — Upper Body + Posture", ex:[
+        ["Warm-up: easy bike","5 min"],
+        ["Dumbbell floor or bench press (light)","10 reps"],
+        ["One-arm dumbbell row (hand braced on bench)","10 each side"],
+        ["Seated dumbbell overhead press","10 reps"],
+        ["Band pull-apart","12 reps — squeeze shoulder blades"],
+        ["Med-ball squeeze press","10 reps — press the 12-lb ball hard between your palms at chest height"],
+        ["Plank hold (on knees)","20–30 sec"],
+        ["Cool-down: foam roll upper back","1–2 min, arms crossed"]
+      ], rounds:"2 rounds" },
+      A2:{ title:"Session A — Lower Body + Core", ex:[
+        ["Warm-up: bike","8–10 min, add a little resistance"],
+        ["Kettlebell goblet box squat","10 reps — hold KB at chest, depth stays pain-free"],
+        ["Leg press (machine)","10 reps — moderate weight, stop well short of a deep knee bend"],
+        ["Kettlebell Romanian deadlift","10 reps — hips back, soft knees, feel the hamstrings"],
+        ["Machine hamstring curl","10 reps, light"],
+        ["Step-up to LOW step","8 each side — only if the knee is quiet; otherwise sub glute bridge march"],
+        ["Med-ball dead bug","6 each side — hold the ball above your chest"],
+        ["Calf raises holding dumbbells","12 reps"],
+        ["Cool-down: foam roll legs","skip the knee itself"]
+      ], rounds:"3 rounds" },
+      B2:{ title:"Session B — Upper Body + Posture", ex:[
+        ["Warm-up: easy bike","5 min"],
+        ["Dumbbell bench press","10 reps"],
+        ["Bent-over dumbbell row","10 each side"],
+        ["Seated overhead press (dumbbell or kettlebell)","10 reps"],
+        ["Kettlebell halo","8 circles each direction — slow, ribs down"],
+        ["Band pull-apart","12 reps"],
+        ["Full plank (hands & toes)","20–30 sec"],
+        ["Cool-down: foam roll upper back + lats","1–2 min"]
+      ], rounds:"3 rounds" },
+      T2:{ title:"Technique + Recovery Day — light", ex:[
+        ["Easy bike","15–20 min, conversational pace"],
+        ["1 light round of Sessions A + B","Week-2 weights, slower tempo, focus on form"],
+        ["Full foam-rolling session","~10 min: quads, hamstrings, calves, glutes, upper back — never the knee joint"]
+      ], rounds:"1 round" },
+      A3:{ title:"Session A — Lower Body + Carry", ex:[
+        ["Warm-up: bike","10 min"],
+        ["Barbell box squat in the rack","10–12 reps — empty or light bar, safety pins set, depth pain-free"],
+        ["Leg press","10–12 reps — progress the weight, keep the range comfortable"],
+        ["Romanian deadlift (barbell or heavy kettlebell)","10–12 reps"],
+        ["Hip thrust (upper back on bench, dumbbell or light bar on hips)","10–12 reps"],
+        ["Kettlebell farmer's carry","20 steps × 3 — one KB each hand, tall posture"],
+        ["Machine hamstring curl","12 reps"],
+        ["Cool-down: foam roll legs","skip the knee"]
+      ], rounds:"3 rounds" },
+      B3:{ title:"Session B — Upper Body + Posture", ex:[
+        ["Warm-up: easy bike","5 min"],
+        ["Bench press (dumbbells or light barbell)","10–12 reps"],
+        ["Barbell bent-over row (light) or heavy dumbbell row","10–12 reps"],
+        ["Overhead press (dumbbells, kettlebell, or empty bar)","10–12 reps"],
+        ["Kettlebell halo","8 each direction"],
+        ["Med-ball Russian twist (seated, feet on floor)","10 each side — heels stay down to spare the knee"],
+        ["Band pull-apart","12–15 reps"],
+        ["Plank 40–50 sec + side plank","20 sec each side"]
+      ], rounds:"3 rounds" }
+    },
+    weekSpec(plan,w){
+      const notes = (plan.config && plan.config.abilityNotes) ? " Your notes: "+plan.config.abilityNotes : "";
+      if (w<=2) return { phase:"Phase 1 · Foundation", cls:"", strength:["A1","B1"], walks:3, walkMin:20, tip:"Learn the movements and work only in a pain-free range."+notes };
+      if (w<=5) return { phase:"Phase 2 · Load", cls:"p2", strength:["A2","B2","T2"], walks:5, walkMin:30, tip:"Add weight one step at a time when 2 rounds of 10 feel manageable."+notes };
+      if (w<=8) return { phase:"Phase 3 · Build", cls:"p3", strength:["A3","B3","A3"], walks:5, walkMin:30, tip:"3 rounds of 10–12. When all rounds feel easy, go heavier next session."+notes };
+      return { phase:"Maintenance · Keep Progressing", cls:"pm", strength:["A3","B3","A3"], walks:5, walkMin:30, tip:"Keep the Phase 3 structure and keep nudging the weights up as your ability allows."+notes };
+    },
+    nutrition(bmr,tdee,kgW,plan){
+      return {
+        rows:[[bmr,"BMR (cal/day at rest)"],[tdee,"Maintenance (TDEE)"],[tdee-250,"Eat this → lose ~0.5 lb/wk"],[tdee-500,"Eat this → lose ~1 lb/wk"]],
+        proteinLo: Math.round(kgW*1.2), proteinHi: Math.round(kgW*1.6),
+        note:"split into 3–4 meals of 25–35 g",
+        warn:"Avoid going below ~1,200 calories/day without medical supervision — aggressive cuts accelerate muscle loss after menopause, which works against you."
+      };
+    }
+  },
+  marathon: {
+    sessions: {
+      STR:{ title:"Injury-Prevention Strength", ex:[
+        ["Warm-up","5 min"],["Squat","10 reps"],["Single-leg Romanian deadlift","8 each side"],["Plank","30 sec"],["Calf raise","15 reps"]
+      ], rounds:"2 rounds" }
+    },
+    weekSpec(plan,w){
+      const total = weeksUntil(plan,"raceDate",8,20);
+      const frac = w/total;
+      const baseMin = Math.max(20, Math.round(((plan.config && plan.config.currentLongRunMi) || 3)*8));
+      let phase,cls,tip;
+      if (frac<=0.4){ phase="Base"; cls=""; tip="Build weekly mileage gradually — no more than ~10% per week."; }
+      else if (frac<=0.75){ phase="Build"; cls="p2"; tip="Add tempo/speed work; keep the long run building."; }
+      else if (frac<=0.9){ phase="Peak"; cls="p3"; tip="Highest-mileage phase — prioritize sleep and fueling."; }
+      else { phase="Taper"; cls="pm"; tip="Cut volume, keep a little intensity — arrive at the start line fresh."; }
+      const warnBanner = total<=8 ? " ⚠️ Less than 8 weeks to race day — consider a shorter goal race for a safer build-up." : "";
+      const walkMin = phase==="Base"?baseMin:phase==="Build"?Math.round(baseMin*1.4):phase==="Peak"?Math.round(baseMin*1.8):Math.round(baseMin*0.8);
+      return { phase:"Marathon Prep · "+phase, cls, strength:["STR"], walks:4, walkMin, tip:tip+warnBanner, cardioLabel:"Run or cross-train" };
+    },
+    nutrition(bmr,tdee,kgW,plan){
+      const target = tdee + 100;
+      return {
+        rows:[[bmr,"BMR (cal/day at rest)"],[tdee,"Maintenance (TDEE)"],[target,"Eat this → fuel your training"]],
+        proteinLo: Math.round(kgW*1.2), proteinHi: Math.round(kgW*1.6),
+        note:"endurance range, spread through the day",
+        extraLine:"Carb target on hard/long-run days: "+Math.round(kgW*5)+"–"+Math.round(kgW*7)+" g",
+        warn:"Endurance athletes underfuel more often than overfuel — don't chronically run a deficit while building mileage."
+      };
+    }
+  },
+  fitnesstest: {
+    sessions: {
+      CIRC:{ title:"Fitness-Test Circuit", ex:[
+        ["Warm-up","5 min"],["Push-ups","max reps or timed"],["Sit-ups","max reps or timed"],["Interval run/row","4× 400m or 4× 2min"],["Plank","hold to failure"]
+      ], rounds:"2–3 rounds" },
+      STR:{ title:"Supporting Strength", ex:[
+        ["Warm-up","5 min"],["Squat","10 reps"],["Push-up","10 reps"],["Row","10 reps"],["Plank","30 sec"]
+      ], rounds:"2 rounds" }
+    },
+    weekSpec(plan,w){
+      const total = weeksUntil(plan,"testDate",4,8);
+      if (w===1) return { phase:"Fitness-Test Prep · Assess", cls:"", strength:["CIRC"], walks:2, walkMin:20, tip:"Establish your baseline on the test's actual movements.", cardioLabel:"Interval cardio" };
+      if (w<total) return { phase:"Fitness-Test Prep · Build", cls:"p2", strength:["CIRC","STR"], walks:3, walkMin:25, tip:"Swap in your test's specific movements via Build Your Own Workout.", cardioLabel:"Interval cardio" };
+      return { phase:"Fitness-Test Prep · Peak/Taper", cls:"p3", strength:["STR"], walks:2, walkMin:15, tip:"Reduce volume this final week — arrive fresh, not fatigued.", cardioLabel:"Easy cardio" };
+    },
+    nutrition(bmr,tdee,kgW,plan){
+      return {
+        rows:[[bmr,"BMR (cal/day at rest)"],[tdee,"Maintenance (TDEE)"],[tdee,"Eat this → maintain & recover between sessions"]],
+        proteinLo: Math.round(kgW*1.4), proteinHi: Math.round(kgW*1.8),
+        note:"recovery-focused given a compressed timeline",
+        warn:"This timeline is short — prioritize sleep and recovery over pushing every session to failure."
+      };
+    }
+  },
+  competition: {
+    sessions: {
+      COMP:{ title:"Compound Strength", ex:[
+        ["Warm-up","10 min"],["Squat pattern","4 sets × 6"],["Bench press pattern","4 sets × 6"],["Deadlift pattern","3 sets × 5"],["Accessory (row/curl/tricep)","3 sets × 10"]
+      ], rounds:"see sets above" }
+    },
+    weekSpec(plan,w){
+      const total = weeksUntil(plan,"competitionDate",6,20);
+      const frac = w/total;
+      let phase,cls,tip;
+      if (frac<=0.4){ phase="Build"; cls=""; tip="Higher volume, moderate intensity — build your base."; }
+      else if (frac<=0.7){ phase="Intensify"; cls="p2"; tip="Volume drops slightly, intensity climbs toward competition lifts/movements."; }
+      else if (frac<=0.9){ phase="Peak"; cls="p3"; tip="Practice at or near competition intensity/openers."; }
+      else { phase="Taper"; cls="pm"; tip="Cut volume sharply, stay sharp — arrive fresh and confident."; }
+      return { phase:"Competition Prep · "+phase, cls, strength:["COMP","COMP"], walks:2, walkMin:15, tip, cardioLabel:"Light cardio" };
+    },
+    nutrition(bmr,tdee,kgW,plan){
+      return {
+        rows:[[bmr,"BMR (cal/day at rest)"],[tdee,"Maintenance (TDEE)"],[tdee,"Eat this → maintain while peaking"]],
+        proteinLo: Math.round(kgW*1.6), proteinHi: Math.round(kgW*2.0),
+        note:"strength-sport range",
+        warn:"If you specifically need to cut or gain weight for this competition, consider also creating a Weight Loss or Muscle Gain plan for that phase — this plan is tuned for peaking, not body-composition change."
+      };
+    }
+  }
+};
+function sessionsFor(plan){ return PROGRAM_TEMPLATES[plan.type].sessions; }
+function weekSpec(plan,w){ return PROGRAM_TEMPLATES[plan.type].weekSpec(plan,w); }
+function currentWeek(plan){
+  if (!plan || !plan.startDate) return 1;
+  const start = new Date(plan.startDate+"T00:00:00");
   const diff = Math.floor((Date.now()-start.getTime())/(7*24*3600*1000))+1;
   return Math.max(1, diff);
 }
-function totalWeeks(){ return Math.max(8, currentWeek(), 8+S.extraWeeks); }
+function totalWeeks(plan){
+  if (!plan) return 8;
+  if (plan.type==="marathon") return Math.max(currentWeek(plan), weeksUntil(plan,"raceDate",8,20)+(plan.extraWeeks||0));
+  if (plan.type==="fitnesstest") return Math.max(currentWeek(plan), weeksUntil(plan,"testDate",4,8)+(plan.extraWeeks||0));
+  if (plan.type==="competition") return Math.max(currentWeek(plan), weeksUntil(plan,"competitionDate",6,20)+(plan.extraWeeks||0));
+  return Math.max(8, currentWeek(plan), 8+(plan.extraWeeks||0));
+}
+// One-time, idempotent conversion of a pre-multi-plan account (a single S.profile.startDate +
+// flat S.checks/S.extraWeeks) into a single "ability"-type plan, so an existing in-progress
+// week and every already-checked-off session survive exactly as-is under the new plans[] model.
+function migrateLegacyPlan(){
+  if (S.plans && S.plans.length) return;
+  if (!S.profile.startDate) return;
+  S.plans = [{
+    id: Date.now(), name: "My Plan", type: "ability", color: PLAN_COLORS[0],
+    createdAt: S.profile.startDate, startDate: S.profile.startDate,
+    checks: Object.assign({}, S.checks), extraWeeks: S.extraWeeks || 0,
+    config: {
+      abilityNotes: "Knee injury — pain-free range only, bike warm-up, skip leg extensions, never foam-roll the knee joint.",
+      protectJoint: "knee", goalWeight: S.profile.goalWeight || null
+    }
+  }];
+  save();
+}
 
 /* ---------- Foods & METs ---------- */
 // Approximate USDA-ballpark values per serving — a personal tracker, not a certified nutrition database.
@@ -1380,124 +1669,296 @@ document.querySelectorAll("nav button").forEach(b=>{
 });
 
 /* ---------- Setup ---------- */
-function finishSetup(){
-  const sd = document.getElementById("setupStart").value || todayStr();
-  const w = parseFloat(document.getElementById("setupWeight").value);
-  const h = parseFloat(document.getElementById("setupHeight").value);
-  const a = parseInt(document.getElementById("setupAge").value);
+function finishBasics(){
+  const w = parseFloat(document.getElementById("basicsWeight").value);
+  const h = parseFloat(document.getElementById("basicsHeight").value);
+  const a = parseInt(document.getElementById("basicsAge").value);
   if (!h || !a){ showToast("Please enter your height and age.", "info"); return; }
-  S.profile.startDate = sd;
   S.profile.heightIn = h;
   S.profile.age = a;
-  if (w){ S.profile.startWeight = w; if(!S.weights.length) S.weights.push({date:sd, lbs:w}); }
+  if (w){ S.profile.startWeight = w; if(!S.weights.length) S.weights.push({date:todayStr(), lbs:w}); }
   save(); renderAll();
+  showToast("Basics saved!", "success");
+}
+
+/* ---------- Plan creation & deletion ---------- */
+function toggleNewPlanForm(){
+  const form = document.getElementById("newPlanForm");
+  const btn = document.getElementById("newPlanToggleBtn");
+  const opening = form.style.display === "none";
+  form.style.display = opening ? "block" : "none";
+  btn.textContent = opening ? "− Cancel" : "+ New plan";
+  if (opening){
+    document.getElementById("npStart").value = todayStr();
+    renderPlanTypeFields();
+  }
+}
+function renderPlanTypeFields(){
+  const type = document.getElementById("npType").value;
+  const el = document.getElementById("npTypeFields");
+  if (type==="weightloss"){
+    el.innerHTML = '<div class="flexrow">'+
+      '<div><label>Goal weight (lb)</label><input type="number" id="npGoalWeight" min="80" max="400" step="0.1"></div>'+
+      '<div><label>Target pace</label><select id="npPace"><option value="0.5">0.5 lb/week</option><option value="1" selected>1 lb/week</option><option value="1.5">1.5 lb/week</option></select></div>'+
+      '</div>';
+  } else if (type==="musclegain"){
+    el.innerHTML = '<div class="flexrow"><div><label>Goal</label><select id="npGoal"><option value="lean" selected>Lean gain</option><option value="standard">Standard gain</option></select></div></div>';
+  } else if (type==="cardio"){
+    el.innerHTML = '<div class="flexrow"><div><label>Current comfortable cardio (min/session)</label><input type="number" id="npBaselineMin" min="5" max="120" value="20"></div></div>';
+  } else if (type==="ability"){
+    el.innerHTML = '<div class="flexrow"><div><label>Joint to protect</label><select id="npJoint"><option value="none">None</option><option value="knee">Knee</option><option value="back">Back</option><option value="shoulder">Shoulder</option></select></div></div>'+
+      '<div class="flexrow"><div style="flex:1"><label>Ability / limitation notes</label><input type="text" id="npAbilityNotes" placeholder="e.g., avoid deep knee flexion, no overhead pressing"></div></div>';
+  } else if (type==="marathon"){
+    el.innerHTML = '<div class="flexrow">'+
+      '<div><label>Race date</label><input type="date" id="npRaceDate"></div>'+
+      '<div><label>Current longest run (mi)</label><input type="number" id="npLongRun" min="0" max="26" step="0.5" value="3"></div>'+
+      '</div>';
+  } else if (type==="fitnesstest"){
+    el.innerHTML = '<div class="flexrow">'+
+      '<div><label>Test date</label><input type="date" id="npTestDate"></div>'+
+      '<div style="flex:2"><label>Test type</label><input type="text" id="npTestType" placeholder="e.g., Army APFT, Police academy PT test"></div>'+
+      '</div>';
+  } else if (type==="competition"){
+    el.innerHTML = '<div class="flexrow">'+
+      '<div><label>Competition date</label><input type="date" id="npCompDate"></div>'+
+      '<div style="flex:2"><label>Competition type</label><input type="text" id="npCompType" placeholder="e.g., powerlifting meet, bodybuilding show"></div>'+
+      '</div>';
+  }
+}
+function collectPlanConfig(type){
+  if (type==="weightloss"){
+    return { goalWeight: parseFloat(document.getElementById("npGoalWeight").value) || null, pace: parseFloat(document.getElementById("npPace").value) || 1 };
+  }
+  if (type==="musclegain"){
+    return { goal: document.getElementById("npGoal").value || "lean" };
+  }
+  if (type==="cardio"){
+    return { baselineMin: parseInt(document.getElementById("npBaselineMin").value) || 20 };
+  }
+  if (type==="ability"){
+    const joint = document.getElementById("npJoint").value;
+    let notes = document.getElementById("npAbilityNotes").value.trim();
+    if (joint && joint!=="none") notes = "Protect: "+joint+". "+notes;
+    return { abilityNotes: notes, protectJoint: joint };
+  }
+  if (type==="marathon"){
+    const raceDate = document.getElementById("npRaceDate").value;
+    if (!raceDate){ showToast("Please enter a race date.", "info"); return null; }
+    return { raceDate, currentLongRunMi: parseFloat(document.getElementById("npLongRun").value) || 3 };
+  }
+  if (type==="fitnesstest"){
+    const testDate = document.getElementById("npTestDate").value;
+    if (!testDate){ showToast("Please enter a test date.", "info"); return null; }
+    return { testDate, testType: document.getElementById("npTestType").value.trim() };
+  }
+  if (type==="competition"){
+    const competitionDate = document.getElementById("npCompDate").value;
+    if (!competitionDate){ showToast("Please enter a competition date.", "info"); return null; }
+    return { competitionDate, competitionType: document.getElementById("npCompType").value.trim() };
+  }
+  return {};
+}
+function defaultPlanName(type, config){
+  if (type==="weightloss") return "Weight Loss";
+  if (type==="musclegain") return "Muscle Gain";
+  if (type==="cardio") return "Cardio";
+  if (type==="ability") return "My Plan";
+  if (type==="marathon") return "Marathon Prep";
+  if (type==="fitnesstest") return config.testType || "Fitness Test Prep";
+  if (type==="competition") return config.competitionType || "Competition Prep";
+  return "My Plan";
+}
+function createPlan(){
+  const type = document.getElementById("npType").value;
+  const start = document.getElementById("npStart").value || todayStr();
+  const config = collectPlanConfig(type);
+  if (!config) return;
+  const color = PLAN_COLORS[S.plans.length % PLAN_COLORS.length];
+  const name = document.getElementById("npName").value.trim() || defaultPlanName(type, config);
+  const plan = { id: Date.now(), name, type, color, createdAt: todayStr(), startDate: start, checks: {}, extraWeeks: 0, config };
+  S.plans.push(plan);
+  activePlanId = plan.id;
+  document.getElementById("npName").value = "";
+  toggleNewPlanForm();
+  save(); renderAll();
+  showToast("Plan created!", "success");
+}
+let confirmDeletePlanId = null;
+function askDeletePlan(id){ confirmDeletePlanId = id; renderDashboard(); }
+function cancelDeletePlan(){ confirmDeletePlanId = null; renderDashboard(); }
+function deletePlan(id){
+  S.plans = S.plans.filter(p=>p.id!==id);
+  if (activePlanId === id) activePlanId = S.plans.length ? S.plans[0].id : null;
+  confirmDeletePlanId = null;
+  save(); renderAll();
+  showToast("Plan deleted.", "info");
 }
 
 /* ---------- Dashboard ---------- */
-function renderDashboard(){
-  const setup = document.getElementById("setupCard");
-  const dash = document.getElementById("dashContent");
-  if (!S.profile.startDate){
-    setup.style.display = "block";
-    document.getElementById("setupStart").value = todayStr();
-    dash.innerHTML = "";
-    document.getElementById("hdrSub").textContent = "Set up your plan below to get started.";
-    return;
+function renderPlanCard(plan){
+  const wk = currentWeek(plan), spec = weekSpec(plan, wk), prog = weekProgress(plan, wk);
+  let nextText;
+  if (prog.done >= prog.total){
+    nextText = "All sessions done for this week! 🎉";
+  } else {
+    let found = null;
+    for (let i=0;i<spec.strength.length;i++){ if (!plan.checks["w"+wk+"-s"+i]){ found = sessionsFor(plan)[spec.strength[i]].title; break; } }
+    if (!found){ for (let i=0;i<spec.walks;i++){ if (!plan.checks["w"+wk+"-c"+i]){ found = (spec.cardioLabel||"Walk or bike")+" ("+spec.walkMin+" min)"; break; } } }
+    nextText = found ? ("Next: "+found) : "Rest day today.";
   }
-  setup.style.display = "none";
-  const wk = currentWeek(), spec = weekSpec(wk);
-  document.getElementById("hdrSub").textContent = "Week "+wk+" · "+spec.phase;
-  const t = todayStr();
-  const todayMeals = S.meals.filter(m=>m.date===t);
-  const prot = todayMeals.reduce((a,m)=>a+(+m.protein||0),0);
-  const cals = todayMeals.reduce((a,m)=>a+(+m.cals||0),0);
-  const [pLo,pHi] = proteinRange();
-  const weekActs = S.activities.filter(a=>weekOf(a.date)===wk);
-  const burned = weekActs.reduce((a,x)=>a+x.kcal,0);
-  const lw = latestWeight();
-  const sw = S.profile.startWeight || lw;
-  const change = (lw-sw);
-  const done = weekProgress(wk);
-  dash.innerHTML =
-    '<div class="card"><h2>This Week — Week '+wk+' <span class="badge '+spec.cls+'">'+spec.phase+'</span></h2>'+
-    '<div class="note">'+spec.tip+'</div>'+
-    '<div class="bar-outer"><div class="bar-inner" style="width:'+done.pct+'%"></div></div>'+
-    '<p style="font-size:.9rem;color:var(--muted)">'+done.done+' of '+done.total+' sessions done this week ('+done.pct+'%)</p>'+
-    '<div class="statrow">'+
-      stat(prot+" g","Protein today (goal "+pLo+"–"+pHi+")")+
-      stat(cals||0,"Calories eaten today")+
-      stat(Math.round(burned),"Exercise cal burned this week")+
-      stat(lw.toFixed(1)+" lb","Current weight "+(change ? "("+(change>0?"+":"")+change.toFixed(1)+")" : ""))+
-    '</div></div>'+
-    '<div class="card"><h2>Today’s Rhythm</h2><p style="font-size:.95rem">'+todayPlanText(wk)+'</p>'+
-    '<p style="font-size:.88rem;color:var(--muted);margin-top:8px">Anchor every meal with 25–35 g protein · '+spec.walks+' walk-or-bike sessions of '+spec.walkMin+' min this week · calcium 1,200 mg/day · check your vitamin D with your doctor.</p></div>';
+  const isConfirming = confirmDeletePlanId === plan.id;
+  return '<div class="rcard plancard" style="border-top:4px solid '+plan.color.text+'"><div class="rbody">'+
+    '<div style="display:flex;justify-content:space-between;align-items:start;gap:6px">'+
+      '<b style="color:'+plan.color.text+'">'+esc(plan.name)+'</b>'+
+      (isConfirming ?
+        '<span style="font-size:.78rem;white-space:nowrap"><a href="#" onclick="deletePlan('+plan.id+');return false;" style="color:var(--warn);font-weight:700;margin-right:8px">Delete?</a><a href="#" onclick="cancelDeletePlan();return false;" style="color:var(--muted)">Cancel</a></span>'
+        : '<button class="del" onclick="askDeletePlan('+plan.id+')">✕</button>') +
+    '</div>'+
+    '<span class="badge" style="background:'+plan.color.bg+';color:'+plan.color.text+'">'+esc(TYPE_LABELS[plan.type])+'</span>'+
+    '<p style="font-size:.85rem;margin-top:6px">Week '+wk+' · '+esc(spec.phase)+'</p>'+
+    '<div class="bar-outer"><div class="bar-inner" style="width:'+prog.pct+'%;background:'+plan.color.text+'"></div></div>'+
+    '<p style="font-size:.8rem;color:var(--muted);margin-top:4px">'+prog.done+'/'+prog.total+' sessions this week</p>'+
+    '<p style="font-size:.82rem;margin-top:4px">'+esc(nextText)+'</p>'+
+    '<button class="btn" style="background:'+plan.color.text+';margin-top:8px" onclick="openPlan('+plan.id+')">View plan</button>'+
+  '</div></div>';
+}
+function openPlan(id){
+  activePlanId = id;
+  const btn = document.querySelector('nav button[data-tab="exercise"]');
+  if (btn) btn.click();
+}
+function renderDashboard(){
+  const basics = document.getElementById("basicsCard");
+  const hasBasics = S.profile.heightIn && S.profile.age;
+  basics.style.display = hasBasics ? "none" : "block";
+  if (!hasBasics){
+    document.getElementById("basicsWeight").value = S.profile.startWeight || "";
+    document.getElementById("basicsHeight").value = S.profile.heightIn || "";
+    document.getElementById("basicsAge").value = S.profile.age || "";
+  }
+  document.getElementById("hdrSub").textContent = S.plans.length ? (S.plans.length+" active plan"+(S.plans.length>1?"s":"")) : "Set up your basics and start a plan below.";
+  document.getElementById("plansGrid").innerHTML = S.plans.length ?
+    S.plans.map(renderPlanCard).join("") :
+    '<p style="color:var(--muted);font-size:.95rem;grid-column:1/-1">No plans yet — use "+ New plan" above to create your first Activity + Nutrition plan.</p>';
 }
 function stat(big,lbl){ return '<div class="stat"><div class="big">'+big+'</div><div class="lbl">'+lbl+'</div></div>'; }
-function todayPlanText(wk){
-  const spec = weekSpec(wk);
+function todayPlanText(plan, wk){
+  const spec = weekSpec(plan, wk);
   const dow = new Date().getDay(); // 0 Sun
-  const strengthDays = spec.strength.length===2 ? [1,4] : [1,3,5]; // Mon/Thu or Mon/Wed/Fri
+  const strengthDays = spec.strength.length===1 ? [1] : (spec.strength.length===2 ? [1,4] : [1,3,5]);
   if (strengthDays.includes(dow)){
     const i = strengthDays.indexOf(dow);
-    return "💪 Strength day: <b>"+SESSIONS[spec.strength[i]].title+"</b> ("+SESSIONS[spec.strength[i]].rounds+"). Check it off in the Exercise tab when done.";
+    const sess = sessionsFor(plan)[spec.strength[i]];
+    return "💪 Strength day: <b>"+sess.title+"</b> ("+sess.rounds+"). Check it off in the Exercise tab when done.";
   }
   if (dow===0) return "🌿 Rest and recovery day. Gentle stretching or a leisurely stroll is perfect.";
-  return "🚶 Cardio day: "+spec.walkMin+" minutes of brisk walking or stationary bike (bike is easiest on the knee). Log it in Calculators → Calories Burned to count it.";
+  return "🚶 "+(spec.cardioLabel||"Cardio")+" day: "+spec.walkMin+" minutes. Log it in Calculators → Calories Burned to count it.";
 }
-function weekOf(dateStr){
-  if (!S.profile.startDate) return 1;
-  const start = new Date(S.profile.startDate+"T00:00:00");
+function weekOf(plan, dateStr){
+  if (!plan || !plan.startDate) return 1;
+  const start = new Date(plan.startDate+"T00:00:00");
   const d = new Date(dateStr+"T00:00:00");
   return Math.floor((d-start)/(7*24*3600*1000))+1;
 }
-function weekDateRange(w){
-  if (!S.profile.startDate) return null;
-  const start = new Date(S.profile.startDate+"T00:00:00");
+function weekDateRange(plan, w){
+  if (!plan || !plan.startDate) return null;
+  const start = new Date(plan.startDate+"T00:00:00");
   const wkStart = new Date(start); wkStart.setDate(start.getDate()+(w-1)*7);
   const wkEnd = new Date(wkStart); wkEnd.setDate(wkStart.getDate()+6);
   return [wkStart, wkEnd];
 }
-function weekProgress(w){
-  const spec = weekSpec(w);
+function weekProgress(plan, w){
+  const spec = weekSpec(plan, w);
   const total = spec.strength.length + spec.walks;
   let done = 0;
-  for (let i=0;i<spec.strength.length;i++) if (S.checks["w"+w+"-s"+i]) done++;
-  for (let i=0;i<spec.walks;i++) if (S.checks["w"+w+"-c"+i]) done++;
-  return { done, total, pct: Math.round(done/total*100) };
+  for (let i=0;i<spec.strength.length;i++) if (plan.checks["w"+w+"-s"+i]) done++;
+  for (let i=0;i<spec.walks;i++) if (plan.checks["w"+w+"-c"+i]) done++;
+  return { done, total, pct: total ? Math.round(done/total*100) : 0 };
 }
 
-/* ---------- Exercise tab ---------- */
+/* ---------- Exercise tab (plan-scoped) ---------- */
+let activePlanId = null;
+function ensureActivePlan(){
+  if (!S.plans.find(p=>p.id===activePlanId)) activePlanId = S.plans.length ? S.plans[0].id : null;
+  return S.plans.find(p=>p.id===activePlanId) || null;
+}
+function renderPlanSelector(containerId){
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (S.plans.length <= 1){ el.innerHTML = ""; return; }
+  el.innerHTML = S.plans.map(p=>
+    '<span class="chip planpill" style="background:'+(p.id===activePlanId?p.color.text:p.color.bg)+';color:'+(p.id===activePlanId?"#fff":p.color.text)+'" onclick="setActivePlan('+p.id+')">'+esc(p.name)+'</span>'
+  ).join("");
+}
+function setActivePlan(id){
+  activePlanId = id;
+  renderExercise();
+  renderProgress();
+  renderPlanSelector("calcPlanSelector");
+}
 function renderExercise(){
   if (!document.getElementById("workoutDate").value) document.getElementById("workoutDate").value = todayStr();
   if (!document.getElementById("workoutExerciseSelect").options.length) renderExerciseOptions();
   renderSessionPreview();
   renderCustomWorkoutHistory();
+  renderPlanSelector("exercisePlanSelector");
+  const plan = ensureActivePlan();
   const wrap = document.getElementById("weeksList");
-  const cw = currentWeek(), n = totalWeeks();
+  const noteEl = document.getElementById("exerciseNote");
+  const warnEl = document.getElementById("exerciseWarnnote");
+  const titleEl = document.getElementById("exercisePlanTitle");
+  if (!plan){
+    wrap.innerHTML = '<p style="color:var(--muted);font-size:.95rem">No plan yet — create one on the Home tab to see your week-by-week schedule here.</p>';
+    if (noteEl) noteEl.innerHTML = "";
+    if (warnEl) warnEl.style.display = "none";
+    if (titleEl){ titleEl.textContent = "Your Week-By-Week Plan"; titleEl.style.color = ""; }
+    return;
+  }
+  if (titleEl){ titleEl.textContent = plan.name+" — Week-By-Week Plan"; titleEl.style.color = plan.color.text; }
+  if (noteEl) noteEl.innerHTML = '<b>Progressive overload rule:</b> when all rounds and reps feel easy with good form, increase the weight at your next session.';
+  if (warnEl){
+    if (plan.type==="ability"){
+      warnEl.style.display = "block";
+      warnEl.innerHTML = '<b>⚠️ Ability-based plan notes:</b> '+(plan.config.abilityNotes ? esc(plan.config.abilityNotes) : "No specific notes entered.")+' Have your doctor or physical therapist confirm this plan fits your situation.';
+    } else {
+      warnEl.style.display = "none";
+    }
+  }
+  const cw = currentWeek(plan), n = totalWeeks(plan);
   let html = "";
   for (let w=1; w<=n; w++){
-    const spec = weekSpec(w), prog = weekProgress(w);
+    const spec = weekSpec(plan, w), prog = weekProgress(plan, w);
     const open = (w===Math.min(cw,n)) ? " open" : "";
     html += '<details class="week"'+open+'><summary>Week '+w+
       ' <span class="badge '+spec.cls+'">'+spec.phase+'</span><span class="pct">'+prog.done+'/'+prog.total+' ✓</span></summary><div class="wk-body">'+
       '<p style="font-size:.88rem;color:var(--muted);margin-bottom:8px">'+spec.tip+'</p>';
     spec.strength.forEach((code,i)=>{
-      const key = "w"+w+"-s"+i, sess = SESSIONS[code], ck = S.checks[key];
-      html += '<div class="checkitem'+(ck?" done":"")+'"><input type="checkbox" '+(ck?"checked":"")+' onchange="toggleCheck(\''+key+'\')"><span class="t"><b>'+sess.title+'</b> · '+sess.rounds+'</span></div>'+
+      const key = "w"+w+"-s"+i, sess = sessionsFor(plan)[code], ck = plan.checks[key];
+      html += '<div class="checkitem'+(ck?" done":"")+'"><input type="checkbox" '+(ck?"checked":"")+' onchange="toggleCheck('+plan.id+',\''+key+'\')"><span class="t"><b>'+sess.title+'</b> · '+sess.rounds+'</span></div>'+
         '<ul class="exlist">'+sess.ex.map(e=>'<li><b>'+e[0]+'</b> — '+e[1]+'</li>').join("")+'</ul>';
     });
-    html += '<h3>Cardio — '+spec.walks+' × '+spec.walkMin+' Min: Brisk Walk Or Stationary Bike</h3>'+
-      '<p style="font-size:.82rem;color:var(--muted)">The bike is ideal while your knee recovers — zero impact. Mix and match with walking as the knee allows.</p>';
+    const cardioLabel = spec.cardioLabel || "Walk Or Bike";
+    html += '<h3>Cardio — '+spec.walks+' × '+spec.walkMin+' Min: '+esc(cardioLabel)+'</h3>';
     for (let i=0;i<spec.walks;i++){
-      const key = "w"+w+"-c"+i, ck = S.checks[key];
-      html += '<div class="checkitem'+(ck?" done":"")+'"><input type="checkbox" '+(ck?"checked":"")+' onchange="toggleCheck(\''+key+'\')"><span class="t">Walk or bike '+(i+1)+' ('+spec.walkMin+' min)</span></div>';
+      const key = "w"+w+"-c"+i, ck = plan.checks[key];
+      html += '<div class="checkitem'+(ck?" done":"")+'"><input type="checkbox" '+(ck?"checked":"")+' onchange="toggleCheck('+plan.id+',\''+key+'\')"><span class="t">'+esc(cardioLabel)+' '+(i+1)+' ('+spec.walkMin+' min)</span></div>';
     }
     html += '</div></details>';
   }
   wrap.innerHTML = html;
 }
-function toggleCheck(key){ S.checks[key] = !S.checks[key]; save(); renderExercise(); renderDashboard(); }
-function addWeek(){ S.extraWeeks++; save(); renderExercise(); }
+function toggleCheck(planId, key){
+  const plan = S.plans.find(p=>p.id===planId);
+  if (!plan) return;
+  plan.checks[key] = !plan.checks[key];
+  save(); renderExercise(); renderDashboard();
+}
+function addWeek(){
+  const plan = ensureActivePlan();
+  if (!plan) return;
+  plan.extraWeeks = (plan.extraWeeks||0)+1;
+  save(); renderExercise();
+}
 
 /* ---------- Custom workout builder ---------- */
 const EXERCISE_LIBRARY = {
@@ -1976,16 +2437,18 @@ function calcEnergy(){
   const w = kg(lbs), h = hIn*2.54;
   const bmr = Math.round(10*w + 6.25*h - 5*age - 161); // Mifflin-St Jeor, female
   const tdee = Math.round(bmr*act);
-  const [pLo,pHi] = [Math.round(w*1.2), Math.round(w*1.6)];
+  const plan = ensureActivePlan();
+  const result = plan ? PROGRAM_TEMPLATES[plan.type].nutrition(bmr, tdee, w, plan) : {
+    rows:[[bmr,"BMR (cal/day at rest)"],[tdee,"Maintenance (TDEE)"],[tdee-250,"Eat this → lose ~0.5 lb/wk"],[tdee-500,"Eat this → lose ~1 lb/wk"]],
+    proteinLo: Math.round(w*1.2), proteinHi: Math.round(w*1.6),
+    note:"split into 3–4 meals of 25–35 g",
+    warn:"Avoid going below ~1,200 calories/day without medical supervision — aggressive cuts accelerate muscle loss after menopause, which works against you."
+  };
   document.getElementById("energyResults").innerHTML =
-    '<div class="statrow">'+
-      stat(bmr,"BMR (cal/day at rest)")+
-      stat(tdee,"Maintenance (TDEE)")+
-      stat(tdee-250,"Eat this → lose ~0.5 lb/wk")+
-      stat(tdee-500,"Eat this → lose ~1 lb/wk")+
-    '</div>'+
-    '<div class="note">Your protein target: <b>'+pLo+'–'+pHi+' g/day</b> (1.2–1.6 g per kg body weight), split into 3–4 meals of 25–35 g.</div>'+
-    '<div class="warnnote">Avoid going below ~1,200 calories/day without medical supervision — aggressive cuts accelerate muscle loss after menopause, which works against you.</div>';
+    '<div class="statrow">'+ result.rows.map(r=>stat(r[0],r[1])).join("") +'</div>'+
+    '<div class="note">Your protein target: <b>'+result.proteinLo+'–'+result.proteinHi+' g/day</b>, '+result.note+'.</div>'+
+    (result.extraLine ? '<div class="note">'+esc(result.extraLine)+'</div>' : '')+
+    '<div class="warnnote">'+result.warn+'</div>';
 }
 function renderBurnOptions(){
   document.getElementById("burnActivity").innerHTML = METS.map((m,i)=>'<option value="'+i+'">'+m[0]+'</option>').join("");
@@ -2028,7 +2491,8 @@ function addWeight(){
 function delWeight(date){ S.weights = S.weights.filter(w=>w.date!==date); save(); renderProgress(); renderDashboard(); }
 function saveGoalWeight(){
   const v = parseFloat(document.getElementById("goalWeightInput").value);
-  S.profile.goalWeight = v || null;
+  const plan = ensureActivePlan();
+  if (plan){ plan.config.goalWeight = v || null; } else { S.profile.goalWeight = v || null; }
   save();
   renderGoalsProgress();
 }
@@ -2049,13 +2513,16 @@ function renderGoalsProgress(){
   });
   const proteinPct = daysWithMeals ? Math.round(daysHitGoal/daysWithMeals*100) : 0;
 
+  const plan = ensureActivePlan();
   let sessDone=0, sessTotal=0;
-  const cw = currentWeek();
-  for (let w=1; w<=cw; w++){ const prog = weekProgress(w); sessDone += prog.done; sessTotal += prog.total; }
+  if (plan){
+    const cw = currentWeek(plan);
+    for (let w=1; w<=cw; w++){ const prog = weekProgress(plan, w); sessDone += prog.done; sessTotal += prog.total; }
+  }
   const sessPct = sessTotal ? Math.round(sessDone/sessTotal*100) : 0;
 
   const lw = latestWeight();
-  const goal = S.profile.goalWeight;
+  const goal = (plan && plan.config && plan.config.goalWeight) || S.profile.goalWeight || null;
   let weightBlock;
   if (goal){
     const start = S.profile.startWeight || lw;
@@ -2078,24 +2545,25 @@ function renderGoalsProgress(){
 }
 function renderCompletedActivities(){
   const el = document.getElementById("completedActivities");
-  if (!S.profile.startDate){ el.innerHTML = '<p style="color:var(--muted);font-size:.9rem">Set up your plan to start tracking completed sessions.</p>'; return; }
+  const plan = ensureActivePlan();
+  if (!plan){ el.innerHTML = '<p style="color:var(--muted);font-size:.9rem">Create a plan on the Home tab to start tracking completed sessions.</p>'; return; }
   const today = new Date(); today.setHours(0,0,0,0);
   const cutoff = new Date(today); cutoff.setDate(cutoff.getDate()-29);
   let html = "";
-  for (let w=1; w<=totalWeeks(); w++){
-    const range = weekDateRange(w);
+  for (let w=1; w<=totalWeeks(plan); w++){
+    const range = weekDateRange(plan, w);
     if (!range) continue;
     const [wkStart, wkEnd] = range;
     if (wkEnd < cutoff || wkStart > today) continue; // outside the last 30 days
-    const spec = weekSpec(w);
+    const spec = weekSpec(plan, w);
     const items = [];
-    spec.strength.forEach((code,i)=>{ if (S.checks["w"+w+"-s"+i]) items.push(SESSIONS[code].title); });
+    spec.strength.forEach((code,i)=>{ if (plan.checks["w"+w+"-s"+i]) items.push(sessionsFor(plan)[code].title); });
     let cardioCount = 0;
-    for (let i=0;i<spec.walks;i++){ if (S.checks["w"+w+"-c"+i]) cardioCount++; }
+    for (let i=0;i<spec.walks;i++){ if (plan.checks["w"+w+"-c"+i]) cardioCount++; }
     if (!items.length && !cardioCount) continue;
     html += '<div class="docq"><div class="q">Week '+w+' ('+fmtDate(ymd(wkStart))+'–'+fmtDate(ymd(wkEnd))+')</div>'+
       (items.length ? '<ul class="exlist">'+items.map(t=>'<li>'+esc(t)+'</li>').join("")+'</ul>' : '') +
-      (cardioCount ? '<p style="font-size:.88rem;color:var(--muted);margin-top:4px">+ '+cardioCount+' walk/bike session'+(cardioCount>1?"s":"")+'</p>' : '') +
+      (cardioCount ? '<p style="font-size:.88rem;color:var(--muted);margin-top:4px">+ '+cardioCount+' '+(spec.cardioLabel||"walk/bike").toLowerCase()+' session'+(cardioCount>1?"s":"")+'</p>' : '') +
       '</div>';
   }
   el.innerHTML = html || '<p style="color:var(--muted);font-size:.9rem">No completed sessions in the last 30 days yet.</p>';
@@ -2130,13 +2598,16 @@ function buildSummaryText(){
   const proteinPct = daysWithMeals ? Math.round(daysHitGoal/daysWithMeals*100) : 0;
 
   let sessDone=0, sessTotal=0;
-  const cw = currentWeek();
-  for (let w=1; w<=cw; w++){ const prog = weekProgress(w); sessDone+=prog.done; sessTotal+=prog.total; }
+  S.plans.forEach(plan=>{
+    const cw = currentWeek(plan);
+    for (let w=1; w<=cw; w++){ const prog = weekProgress(plan, w); sessDone+=prog.done; sessTotal+=prog.total; }
+  });
   const sessPct = sessTotal ? Math.round(sessDone/sessTotal*100) : 0;
 
   const lw = latestWeight();
   const sw = S.profile.startWeight || lw;
-  const goal = S.profile.goalWeight;
+  const goalPlan = S.plans.find(p=>p.config && p.config.goalWeight);
+  const goal = (goalPlan && goalPlan.config.goalWeight) || S.profile.goalWeight || null;
   const change = lw - sw;
 
   const lines = [];
@@ -2167,7 +2638,9 @@ function emailSummary(){
 }
 function renderProgress(){
   if (!document.getElementById("wtDate").value) document.getElementById("wtDate").value = todayStr();
-  document.getElementById("goalWeightInput").value = S.profile.goalWeight || "";
+  renderPlanSelector("progressPlanSelector");
+  const activePlan = ensureActivePlan();
+  document.getElementById("goalWeightInput").value = (activePlan && activePlan.config && activePlan.config.goalWeight) || S.profile.goalWeight || "";
   const ws = S.weights;
   const statsEl = document.getElementById("wtStats");
   if (ws.length){
@@ -2280,10 +2753,12 @@ function drawCalsChart(){
   drawBarsChart("chartCals", days, [{name:"Eaten",values:eaten,color:"#8e6d0b"},{name:"Burned (exercise)",values:burned,color:"#0549e1"}], null, "Log meals and activities to compare calories in vs. out");
 }
 function drawWorkoutsChart(){
-  const n = Math.min(totalWeeks(), Math.max(currentWeek(),8));
-  const labels=[], vals=[];
-  for(let w=1;w<=n;w++){ labels.push("wk"+w); vals.push(weekProgress(w).done); }
   const {ctx,W,H} = setupCanvas("chartWorkouts");
+  const plan = ensureActivePlan();
+  if (!plan){ emptyMsg(ctx,W,H,"Create a plan on the Home tab to see weekly totals"); return; }
+  const n = Math.min(totalWeeks(plan), Math.max(currentWeek(plan),8));
+  const labels=[], vals=[];
+  for(let w=1;w<=n;w++){ labels.push("wk"+w); vals.push(weekProgress(plan, w).done); }
   if (!vals.some(v=>v>0)){ emptyMsg(ctx,W,H,"Check off sessions in the Exercise tab to see weekly totals"); return; }
   const pad={l:36,r:10,t:14,b:26};
   const hi=Math.max(8,...vals)+1;
@@ -2292,7 +2767,7 @@ function drawWorkoutsChart(){
   for(let g=0;g<=4;g++){ const v=hi*g/4, yy=y(v); ctx.beginPath(); ctx.moveTo(pad.l,yy); ctx.lineTo(W-pad.r,yy); ctx.stroke(); ctx.fillText(Math.round(v),pad.l-6,yy+4); }
   const slot=(W-pad.l-pad.r)/n;
   vals.forEach((v,i)=>{
-    ctx.fillStyle = (i+1===currentWeek()) ? "#c9a227" : "#0549e1";
+    ctx.fillStyle = (i+1===currentWeek(plan)) ? "#c9a227" : plan.color.text;
     if (v>0) ctx.fillRect(pad.l+slot*i+slot*0.2, y(v), slot*0.6, (H-pad.b)-y(v));
     ctx.fillStyle="#888"; ctx.textAlign="center";
     if (n<=16 || i%2===0) ctx.fillText(labels[i], pad.l+slot*i+slot/2, H-8);
@@ -2340,11 +2815,14 @@ function renderAll(){
   document.getElementById("cHeight").value = S.profile.heightIn || "";
   document.getElementById("cWeight").value = (S.weights.length || S.profile.startWeight) ? latestWeight() : "";
   document.getElementById("cActivity").value = String(S.profile.activity);
+  ensureActivePlan();
+  renderPlanSelector("calcPlanSelector");
 }
 document.getElementById("mealDate").addEventListener("change", renderMeals);
 document.getElementById("pantryInput").addEventListener("keydown", e=>{ if(e.key==="Enter") addPantry(); });
 document.getElementById("barcodeInput").addEventListener("keydown", e=>{ if(e.key==="Enter") lookupBarcode(); });
 window.addEventListener("resize", ()=>{ if(document.getElementById("tab-progress").classList.contains("active")) renderProgress(); });
+migrateLegacyPlan();
 renderAll();
 refreshFromServer();
 </script>

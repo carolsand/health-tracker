@@ -13,6 +13,7 @@ const DEFAULT_STATE = {
   checks: {},
   pantry: [],
   customWorkouts: [],
+  plans: [],
   extraWeeks: 0,
   doctor: { answers: {}, custom: [], apptDate: "" }
 };
