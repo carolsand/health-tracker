@@ -91,7 +91,8 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
 .rcard details{font-size:.82rem;color:var(--muted)}
 .rcard details summary{cursor:pointer;font-weight:600}
 .rcard .btn{margin-top:auto;padding:7px 12px;font-size:.85rem}
-.match{font-size:.75rem;background:#fdf3d7;color:#8a6d00;border-radius:10px;padding:2px 8px;font-weight:700;align-self:flex-start}
+.match{font-size:.75rem;background:#fdf3d7;color:#8a6d00;border-radius:10px;padding:2px 8px;font-weight:700;align-self:flex-start;margin-right:4px}
+.match.good{background:var(--accent-light);color:var(--accent-dark)}
 .viewToggle{display:flex;gap:6px;margin:8px 0}
 .viewToggle button{border:1.5px solid var(--accent);background:transparent;color:var(--accent-dark);border-radius:8px;padding:6px 12px;font-size:.85rem;font-weight:600;cursor:pointer}
 .viewToggle button.active{background:var(--accent);color:#fff}
@@ -235,6 +236,9 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
             <option value="musclegain">Muscle gain</option>
             <option value="cardio">Cardio / general endurance</option>
             <option value="ability">Plan based on my abilities</option>
+            <option value="fivek">Preparing for a 5K</option>
+            <option value="tenk">Preparing for a 10K</option>
+            <option value="halfmarathon">Preparing for a half marathon</option>
             <option value="marathon">Preparing for a marathon</option>
             <option value="fitnesstest">Preparing for a fitness test</option>
             <option value="competition">Preparing for a competition</option>
@@ -384,6 +388,7 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
   </div>
   <div class="card">
     <h2>Suggested Meals &amp; Recipes</h2>
+    <div id="recipesPlanSelector" class="planPills"></div>
     <p id="recipeHint" style="font-size:.88rem;color:var(--muted)"></p>
     <div id="recipeControlsTop"></div>
     <div class="rgrid" id="recipeGrid"></div>
@@ -757,6 +762,7 @@ const PLAN_COLORS = [
 const TYPE_LABELS = {
   weightloss: "Weight Loss", musclegain: "Muscle Gain", cardio: "Cardio",
   ability: "Based On My Abilities", marathon: "Marathon Prep",
+  halfmarathon: "Half Marathon Prep", tenk: "10K Prep", fivek: "5K Prep",
   fitnesstest: "Fitness Test Prep", competition: "Competition Prep"
 };
 // Weeks between plan.startDate and plan.config[dateField], clamped to [lo,hi] -- used by the
@@ -769,6 +775,68 @@ function weeksUntil(plan, dateField, lo, hi){
   const end = new Date(target+"T00:00:00");
   const wk = Math.round((end-start)/(7*24*3600*1000));
   return Math.max(lo, Math.min(hi, wk||lo));
+}
+// Shared "countdown to race day" infrastructure for the 4 running-event plan types below --
+// they all periodize the same way (Base/Build/Peak/Taper as a fraction of weeks-to-race) and
+// differ only in distance-appropriate week range, weekly run count, pace scaling, and coaching copy.
+const RACE_TYPES = {
+  marathon: { label:"Marathon Prep", lo:8, hi:20, runs:4, minPerMile:8, minFloor:20, buildMult:1.4, peakMult:1.8, taperMult:0.5,
+    tipBase:"Build weekly mileage gradually — no more than ~10% per week.",
+    tipBuild:"Add tempo/speed work; keep the long run building.",
+    tipPeak:"Highest-mileage phase — prioritize sleep and fueling.",
+    tipTaper:"Cut volume, keep a little intensity — arrive at the start line fresh.",
+    cardioLabel:"Run or cross-train", strengthCode:"STR", surplus:100, carbLo:5, carbHi:7 },
+  halfmarathon: { label:"Half Marathon Prep", lo:8, hi:16, runs:4, minPerMile:8, minFloor:20, buildMult:1.35, peakMult:1.7, taperMult:0.55,
+    tipBase:"Build weekly mileage gradually — no more than ~10% per week.",
+    tipBuild:"Add tempo work; keep the long run building steadily.",
+    tipPeak:"Highest-mileage phase — prioritize sleep and fueling on long-run days.",
+    tipTaper:"Cut volume, keep a little intensity — arrive at the start line fresh.",
+    cardioLabel:"Run or cross-train", strengthCode:"STR", surplus:75, carbLo:4, carbHi:6 },
+  tenk: { label:"10K Prep", lo:6, hi:12, runs:3, minPerMile:7, minFloor:20, buildMult:1.3, peakMult:1.6, taperMult:0.6,
+    tipBase:"Build weekly mileage gradually with mostly easy running.",
+    tipBuild:"Add one tempo run and one interval session per week.",
+    tipPeak:"Longest tempo/interval efforts of the cycle — dial in race pace.",
+    tipTaper:"Cut volume, hold a little intensity — arrive fresh.",
+    cardioLabel:"Run (easy/tempo/interval)", strengthCode:"STR", surplus:50, carbLo:4, carbHi:6 },
+  fivek: { label:"5K Prep", lo:4, hi:10, runs:3, minPerMile:8, minFloor:15, buildMult:1.3, peakMult:1.5, taperMult:0.6,
+    tipBase:"Build an aerobic base with easy running; add one short interval session per week.",
+    tipBuild:"Add tempo runs and longer intervals (400–800m repeats) to build speed.",
+    tipPeak:"Race-pace intervals and a tune-up race if available — this is peak sharpness.",
+    tipTaper:"Cut volume, keep a few short strides — arrive fresh and fast.",
+    cardioLabel:"Run (easy/interval/tempo)", strengthCode:"SPEEDSTR", surplus:0, carbLo:3, carbHi:5 }
+};
+const STR_SESSION = { title:"Injury-Prevention Strength", ex:[
+  ["Warm-up","5 min"],["Squat","10 reps"],["Single-leg Romanian deadlift","8 each side"],["Plank","30 sec"],["Calf raise","15 reps"]
+], rounds:"2 rounds" };
+const SPEEDSTR_SESSION = { title:"5K-Specific Strength & Speed Prep", ex:[
+  ["Warm-up","5 min easy jog"],["High knees","3× 20m"],["Bounding","3× 20m"],["Squat","10 reps"],
+  ["Single-leg Romanian deadlift","8 each side"],["Plank","30 sec"]
+], rounds:"2 rounds" };
+function raceWeekSpec(plan,w){
+  const cfg = RACE_TYPES[plan.type];
+  const total = weeksUntil(plan,"raceDate",cfg.lo,cfg.hi);
+  const frac = w/total;
+  const baseMi = (plan.config && plan.config.currentLongRunMi) || 3;
+  const baseMin = Math.max(cfg.minFloor, Math.round(baseMi*cfg.minPerMile));
+  let phase,cls,tip;
+  if (frac<=0.4){ phase="Base"; cls=""; tip=cfg.tipBase; }
+  else if (frac<=0.75){ phase="Build"; cls="p2"; tip=cfg.tipBuild; }
+  else if (frac<=0.9){ phase="Peak"; cls="p3"; tip=cfg.tipPeak; }
+  else { phase="Taper"; cls="pm"; tip=cfg.tipTaper; }
+  const warnBanner = total<=cfg.lo ? " ⚠️ Very little time to race day — consider a longer build-up or a later race date." : "";
+  const walkMin = phase==="Base"?baseMin:phase==="Build"?Math.round(baseMin*cfg.buildMult):phase==="Peak"?Math.round(baseMin*cfg.peakMult):Math.round(baseMin*cfg.taperMult);
+  return { phase:cfg.label+" · "+phase, cls, strength:[cfg.strengthCode], walks:cfg.runs, walkMin, tip:tip+warnBanner, cardioLabel:cfg.cardioLabel };
+}
+function enduranceNutrition(bmr,tdee,kgW,plan){
+  const cfg = RACE_TYPES[plan.type];
+  const target = tdee + cfg.surplus;
+  return {
+    rows:[[bmr,"BMR (cal/day at rest)"],[tdee,"Maintenance (TDEE)"],[target, cfg.surplus>0 ? "Eat this → fuel your training" : "Eat this → maintain while training"]],
+    proteinLo: Math.round(kgW*1.2), proteinHi: Math.round(kgW*1.6),
+    note:"endurance range, spread through the day",
+    extraLine:"Carb target on hard/long-run days: "+Math.round(kgW*cfg.carbLo)+"–"+Math.round(kgW*cfg.carbHi)+" g",
+    warn:"Endurance athletes underfuel more often than overfuel — don't chronically run a deficit while building mileage."
+  };
 }
 const PROGRAM_TEMPLATES = {
   weightloss: {
@@ -971,34 +1039,24 @@ const PROGRAM_TEMPLATES = {
     }
   },
   marathon: {
-    sessions: {
-      STR:{ title:"Injury-Prevention Strength", ex:[
-        ["Warm-up","5 min"],["Squat","10 reps"],["Single-leg Romanian deadlift","8 each side"],["Plank","30 sec"],["Calf raise","15 reps"]
-      ], rounds:"2 rounds" }
-    },
-    weekSpec(plan,w){
-      const total = weeksUntil(plan,"raceDate",8,20);
-      const frac = w/total;
-      const baseMin = Math.max(20, Math.round(((plan.config && plan.config.currentLongRunMi) || 3)*8));
-      let phase,cls,tip;
-      if (frac<=0.4){ phase="Base"; cls=""; tip="Build weekly mileage gradually — no more than ~10% per week."; }
-      else if (frac<=0.75){ phase="Build"; cls="p2"; tip="Add tempo/speed work; keep the long run building."; }
-      else if (frac<=0.9){ phase="Peak"; cls="p3"; tip="Highest-mileage phase — prioritize sleep and fueling."; }
-      else { phase="Taper"; cls="pm"; tip="Cut volume, keep a little intensity — arrive at the start line fresh."; }
-      const warnBanner = total<=8 ? " ⚠️ Less than 8 weeks to race day — consider a shorter goal race for a safer build-up." : "";
-      const walkMin = phase==="Base"?baseMin:phase==="Build"?Math.round(baseMin*1.4):phase==="Peak"?Math.round(baseMin*1.8):Math.round(baseMin*0.8);
-      return { phase:"Marathon Prep · "+phase, cls, strength:["STR"], walks:4, walkMin, tip:tip+warnBanner, cardioLabel:"Run or cross-train" };
-    },
-    nutrition(bmr,tdee,kgW,plan){
-      const target = tdee + 100;
-      return {
-        rows:[[bmr,"BMR (cal/day at rest)"],[tdee,"Maintenance (TDEE)"],[target,"Eat this → fuel your training"]],
-        proteinLo: Math.round(kgW*1.2), proteinHi: Math.round(kgW*1.6),
-        note:"endurance range, spread through the day",
-        extraLine:"Carb target on hard/long-run days: "+Math.round(kgW*5)+"–"+Math.round(kgW*7)+" g",
-        warn:"Endurance athletes underfuel more often than overfuel — don't chronically run a deficit while building mileage."
-      };
-    }
+    sessions: { STR: STR_SESSION },
+    weekSpec(plan,w){ return raceWeekSpec(plan,w); },
+    nutrition(bmr,tdee,kgW,plan){ return enduranceNutrition(bmr,tdee,kgW,plan); }
+  },
+  halfmarathon: {
+    sessions: { STR: STR_SESSION },
+    weekSpec(plan,w){ return raceWeekSpec(plan,w); },
+    nutrition(bmr,tdee,kgW,plan){ return enduranceNutrition(bmr,tdee,kgW,plan); }
+  },
+  tenk: {
+    sessions: { STR: STR_SESSION },
+    weekSpec(plan,w){ return raceWeekSpec(plan,w); },
+    nutrition(bmr,tdee,kgW,plan){ return enduranceNutrition(bmr,tdee,kgW,plan); }
+  },
+  fivek: {
+    sessions: { SPEEDSTR: SPEEDSTR_SESSION },
+    weekSpec(plan,w){ return raceWeekSpec(plan,w); },
+    nutrition(bmr,tdee,kgW,plan){ return enduranceNutrition(bmr,tdee,kgW,plan); }
   },
   fitnesstest: {
     sessions: {
@@ -1060,7 +1118,7 @@ function currentWeek(plan){
 }
 function totalWeeks(plan){
   if (!plan) return 8;
-  if (plan.type==="marathon") return Math.max(currentWeek(plan), weeksUntil(plan,"raceDate",8,20)+(plan.extraWeeks||0));
+  if (RACE_TYPES[plan.type]){ const cfg = RACE_TYPES[plan.type]; return Math.max(currentWeek(plan), weeksUntil(plan,"raceDate",cfg.lo,cfg.hi)+(plan.extraWeeks||0)); }
   if (plan.type==="fitnesstest") return Math.max(currentWeek(plan), weeksUntil(plan,"testDate",4,8)+(plan.extraWeeks||0));
   if (plan.type==="competition") return Math.max(currentWeek(plan), weeksUntil(plan,"competitionDate",6,20)+(plan.extraWeeks||0));
   return Math.max(8, currentWeek(plan), 8+(plan.extraWeeks||0));
@@ -1708,10 +1766,10 @@ function renderPlanTypeFields(){
   } else if (type==="ability"){
     el.innerHTML = '<div class="flexrow"><div><label>Joint to protect</label><select id="npJoint"><option value="none">None</option><option value="knee">Knee</option><option value="back">Back</option><option value="shoulder">Shoulder</option></select></div></div>'+
       '<div class="flexrow"><div style="flex:1"><label>Ability / limitation notes</label><input type="text" id="npAbilityNotes" placeholder="e.g., avoid deep knee flexion, no overhead pressing"></div></div>';
-  } else if (type==="marathon"){
+  } else if (type==="fivek"||type==="tenk"||type==="halfmarathon"||type==="marathon"){
     el.innerHTML = '<div class="flexrow">'+
       '<div><label>Race date</label><input type="date" id="npRaceDate"></div>'+
-      '<div><label>Current longest run (mi)</label><input type="number" id="npLongRun" min="0" max="26" step="0.5" value="3"></div>'+
+      '<div><label>Current comfortable run distance (mi)</label><input type="number" id="npLongRun" min="0" max="26" step="0.5" value="3"></div>'+
       '</div>';
   } else if (type==="fitnesstest"){
     el.innerHTML = '<div class="flexrow">'+
@@ -1741,7 +1799,7 @@ function collectPlanConfig(type){
     if (joint && joint!=="none") notes = "Protect: "+joint+". "+notes;
     return { abilityNotes: notes, protectJoint: joint };
   }
-  if (type==="marathon"){
+  if (type==="fivek"||type==="tenk"||type==="halfmarathon"||type==="marathon"){
     const raceDate = document.getElementById("npRaceDate").value;
     if (!raceDate){ showToast("Please enter a race date.", "info"); return null; }
     return { raceDate, currentLongRunMi: parseFloat(document.getElementById("npLongRun").value) || 3 };
@@ -1763,6 +1821,9 @@ function defaultPlanName(type, config){
   if (type==="musclegain") return "Muscle Gain";
   if (type==="cardio") return "Cardio";
   if (type==="ability") return "My Plan";
+  if (type==="fivek") return "5K Prep";
+  if (type==="tenk") return "10K Prep";
+  if (type==="halfmarathon") return "Half Marathon Prep";
   if (type==="marathon") return "Marathon Prep";
   if (type==="fitnesstest") return config.testType || "Fitness Test Prep";
   if (type==="competition") return config.competitionType || "Competition Prep";
@@ -1895,6 +1956,7 @@ function setActivePlan(id){
   renderExercise();
   renderProgress();
   renderPlanSelector("calcPlanSelector");
+  renderRecipes();
 }
 function renderExercise(){
   if (!document.getElementById("workoutDate").value) document.getElementById("workoutDate").value = todayStr();
@@ -2289,23 +2351,26 @@ function addScannedIngredient(){
 
 /* ---------- Recipes & pantry ---------- */
 const RECIPES = [
-  {n:"Greek Yogurt Protein Bowl",e:"🥣",p:32,c:340,ing:["greek yogurt","whey protein","berries","flaxseed"],how:"Stir 1 scoop whey into 1 cup plain Greek yogurt. Top with a handful of berries and 1 tbsp ground flaxseed."},
-  {n:"Feta & Spinach Omelet Plate",e:"🍳",p:28,c:380,ing:["eggs","feta","spinach","edamame","whole grain bread"],how:"2-egg omelet with 1/4 cup feta and a handful of spinach. Serve with 1/2 cup edamame and a slice of whole grain toast."},
-  {n:"Baked Salmon Quinoa Plate",e:"🐟",p:34,c:450,ing:["salmon","quinoa","broccoli","olive oil","lemon"],how:"Bake a 5 oz salmon fillet at 400°F for 12–15 min. Serve over 1/2 cup cooked quinoa with roasted broccoli, olive oil, and lemon."},
-  {n:"Turkey & Broccoli Stir-Fry",e:"🥦",p:35,c:420,ing:["ground turkey","broccoli","snap peas","brown rice","garlic","soy sauce"],how:"Brown 4 oz lean ground turkey with garlic. Add broccoli and snap peas, splash of low-sodium soy sauce, serve over 1/2 cup brown rice."},
-  {n:"Chicken Chickpea Power Salad",e:"🥗",p:36,c:400,ing:["chicken breast","chickpeas","salad greens","olive oil","lemon"],how:"Slice 4 oz grilled chicken over a big bowl of greens with 1/2 cup chickpeas. Dress with olive oil and lemon."},
-  {n:"Tuna & White Bean Salad",e:"🥫",p:33,c:350,ing:["canned tuna","white beans","red onion","olive oil","lemon"],how:"Mix a 3 oz can of tuna with 1/2 cup white beans, diced red onion, olive oil, and lemon. Great on greens or whole grain toast."},
-  {n:"Cottage Cheese Berry Bowl",e:"🫐",p:25,c:250,ing:["cottage cheese","berries","almonds","honey"],how:"3/4 cup cottage cheese topped with berries, a small handful of almonds, and a drizzle of honey."},
-  {n:"Sheet-Pan Chicken & Vegetables",e:"🍗",p:38,c:430,ing:["chicken breast","bell pepper","zucchini","potatoes","olive oil"],how:"Toss 5 oz chicken breast and chopped vegetables with olive oil and herbs. Roast at 425°F for 22–25 min on one pan."},
-  {n:"Shrimp & Zucchini Skillet",e:"🍤",p:30,c:320,ing:["shrimp","zucchini","garlic","olive oil","quinoa"],how:"Sauté 5 oz shrimp with garlic and sliced zucchini in olive oil, 5–6 min. Serve over 1/2 cup quinoa."},
-  {n:"Peanut Butter Banana Protein Smoothie",e:"🥤",p:30,c:320,ing:["whey protein","banana","peanut butter","almond milk"],how:"Blend 1 scoop whey, 1/2 banana, 1 tbsp peanut butter, and 1 cup unsweetened almond milk with ice."},
-  {n:"Slow-Cooker Chicken Chili",e:"🌶️",p:34,c:390,ing:["chicken breast","black beans","tomatoes","corn","chili powder"],how:"Slow-cook chicken breasts with black beans, diced tomatoes, corn, and chili powder 4–6 hrs. Shred and serve — freezes well."},
-  {n:"Baked Cod, Potatoes & Green Beans",e:"🐠",p:32,c:380,ing:["cod","potatoes","green beans","olive oil","lemon"],how:"Bake a 6 oz cod fillet with baby potatoes and green beans, olive oil and lemon, 400°F for ~18 min."},
-  {n:"Egg & Cottage Cheese Scramble",e:"🍽️",p:30,c:330,ing:["eggs","cottage cheese","tomatoes","whole grain bread"],how:"Scramble 2 eggs, fold in 1/2 cup cottage cheese at the end, top with tomatoes. Serve with whole grain toast."},
-  {n:"Lentil Soup with Greek Yogurt",e:"🍲",p:24,c:340,ing:["lentils","carrots","onion","tomatoes","greek yogurt"],how:"Simmer 3/4 cup lentils with carrots, onion, and tomatoes ~25 min. Finish each bowl with a big spoonful of Greek yogurt."}
+  {n:"Greek Yogurt Protein Bowl",e:"🥣",p:32,c:340,ing:["greek yogurt","whey protein","berries","flaxseed"],how:"Stir 1 scoop whey into 1 cup plain Greek yogurt. Top with a handful of berries and 1 tbsp ground flaxseed.",goodFor:["musclegain","weightloss","competition","fitnesstest","fivek"]},
+  {n:"Feta & Spinach Omelet Plate",e:"🍳",p:28,c:380,ing:["eggs","feta","spinach","edamame","whole grain bread"],how:"2-egg omelet with 1/4 cup feta and a handful of spinach. Serve with 1/2 cup edamame and a slice of whole grain toast.",goodFor:["ability","weightloss","fitnesstest"]},
+  {n:"Baked Salmon Quinoa Plate",e:"🐟",p:34,c:450,ing:["salmon","quinoa","broccoli","olive oil","lemon"],how:"Bake a 5 oz salmon fillet at 400°F for 12–15 min. Serve over 1/2 cup cooked quinoa with roasted broccoli, olive oil, and lemon.",goodFor:["marathon","halfmarathon","tenk","musclegain"]},
+  {n:"Turkey & Broccoli Stir-Fry",e:"🥦",p:35,c:420,ing:["ground turkey","broccoli","snap peas","brown rice","garlic","soy sauce"],how:"Brown 4 oz lean ground turkey with garlic. Add broccoli and snap peas, splash of low-sodium soy sauce, serve over 1/2 cup brown rice.",goodFor:["musclegain","marathon","halfmarathon","tenk","cardio"]},
+  {n:"Chicken Chickpea Power Salad",e:"🥗",p:36,c:400,ing:["chicken breast","chickpeas","salad greens","olive oil","lemon"],how:"Slice 4 oz grilled chicken over a big bowl of greens with 1/2 cup chickpeas. Dress with olive oil and lemon.",goodFor:["weightloss","competition","ability","fitnesstest","fivek"]},
+  {n:"Tuna & White Bean Salad",e:"🥫",p:33,c:350,ing:["canned tuna","white beans","red onion","olive oil","lemon"],how:"Mix a 3 oz can of tuna with 1/2 cup white beans, diced red onion, olive oil, and lemon. Great on greens or whole grain toast.",goodFor:["weightloss","competition"]},
+  {n:"Cottage Cheese Berry Bowl",e:"🫐",p:25,c:250,ing:["cottage cheese","berries","almonds","honey"],how:"3/4 cup cottage cheese topped with berries, a small handful of almonds, and a drizzle of honey.",goodFor:["weightloss"]},
+  {n:"Sheet-Pan Chicken & Vegetables",e:"🍗",p:38,c:430,ing:["chicken breast","bell pepper","zucchini","potatoes","olive oil"],how:"Toss 5 oz chicken breast and chopped vegetables with olive oil and herbs. Roast at 425°F for 22–25 min on one pan.",goodFor:["musclegain","marathon","halfmarathon","cardio","ability"]},
+  {n:"Shrimp & Zucchini Skillet",e:"🍤",p:30,c:320,ing:["shrimp","zucchini","garlic","olive oil","quinoa"],how:"Sauté 5 oz shrimp with garlic and sliced zucchini in olive oil, 5–6 min. Serve over 1/2 cup quinoa.",goodFor:["weightloss","tenk","fivek","cardio"]},
+  {n:"Peanut Butter Banana Protein Smoothie",e:"🥤",p:30,c:320,ing:["whey protein","banana","peanut butter","almond milk"],how:"Blend 1 scoop whey, 1/2 banana, 1 tbsp peanut butter, and 1 cup unsweetened almond milk with ice.",goodFor:["musclegain","fivek","tenk","cardio","competition"]},
+  {n:"Slow-Cooker Chicken Chili",e:"🌶️",p:34,c:390,ing:["chicken breast","black beans","tomatoes","corn","chili powder"],how:"Slow-cook chicken breasts with black beans, diced tomatoes, corn, and chili powder 4–6 hrs. Shred and serve — freezes well.",goodFor:["musclegain","marathon","halfmarathon","ability"]},
+  {n:"Baked Cod, Potatoes & Green Beans",e:"🐠",p:32,c:380,ing:["cod","potatoes","green beans","olive oil","lemon"],how:"Bake a 6 oz cod fillet with baby potatoes and green beans, olive oil and lemon, 400°F for ~18 min.",goodFor:["marathon","halfmarathon","tenk","weightloss"]},
+  {n:"Egg & Cottage Cheese Scramble",e:"🍽️",p:30,c:330,ing:["eggs","cottage cheese","tomatoes","whole grain bread"],how:"Scramble 2 eggs, fold in 1/2 cup cottage cheese at the end, top with tomatoes. Serve with whole grain toast.",goodFor:["weightloss","musclegain","fitnesstest"]},
+  {n:"Lentil Soup with Greek Yogurt",e:"🍲",p:24,c:340,ing:["lentils","carrots","onion","tomatoes","greek yogurt"],how:"Simmer 3/4 cup lentils with carrots, onion, and tomatoes ~25 min. Finish each bowl with a big spoonful of Greek yogurt.",goodFor:["cardio","marathon","halfmarathon","ability","weightloss"]}
 ];
 function recipeMatches(r){
   return S.pantry.filter(x=>r.ing.some(i=>i.includes(x)||x.includes(i))).length;
+}
+function recipeGoodForPlan(r, plan){
+  return (plan && r.goodFor && r.goodFor.includes(plan.type)) ? 1 : 0;
 }
 let recipeView = "grid";
 let recipePage = 1;
@@ -2330,12 +2395,19 @@ function renderRecipes(){
   document.getElementById("pantryChips").innerHTML = S.pantry.length ?
     S.pantry.map((p,i)=>'<span class="chip">'+esc(p)+' <b style="cursor:pointer" onclick="delPantry('+i+')">✕</b></span>').join("") :
     '<span style="font-size:.85rem;color:var(--muted)">No ingredients added yet.</span>';
-  let list = RECIPES.map((r,i)=>({r,i,m:recipeMatches(r)}));
-  if (S.pantry.length){
-    list.sort((a,b)=>b.m-a.m);
+  renderPlanSelector("recipesPlanSelector");
+  const plan = ensureActivePlan();
+  let list = RECIPES.map((r,i)=>({r,i,m:recipeMatches(r),g:recipeGoodForPlan(r,plan)}));
+  list.sort((a,b)=> (b.g-a.g) || (b.m-a.m));
+  const planLabel = plan ? esc(TYPE_LABELS[plan.type]) : null;
+  if (plan && S.pantry.length){
+    document.getElementById("recipeHint").textContent = "Sorted for your "+TYPE_LABELS[plan.type]+" plan, then by how many of your ingredients each meal uses.";
+  } else if (plan){
+    document.getElementById("recipeHint").textContent = "Sorted for your "+TYPE_LABELS[plan.type]+" plan. Add ingredients above to also sort by what's in your kitchen.";
+  } else if (S.pantry.length){
     document.getElementById("recipeHint").textContent = "Sorted by how many of your ingredients each meal uses.";
   } else {
-    document.getElementById("recipeHint").textContent = "Add ingredients above to sort these by what's in your kitchen.";
+    document.getElementById("recipeHint").textContent = "Add ingredients above to sort these by what's in your kitchen, or start a plan on Home to see recipes suited to it first.";
   }
   const totalPages = Math.max(1, Math.ceil(list.length/RECIPES_PER_PAGE));
   if (recipePage>totalPages) recipePage = totalPages;
@@ -2347,17 +2419,19 @@ function renderRecipes(){
   const grid = document.getElementById("recipeGrid");
   if (recipeView==="list"){
     grid.className = "rlist";
-    grid.innerHTML = pageItems.map(({r,i,m})=>
+    grid.innerHTML = pageItems.map(({r,i,m,g})=>
       '<div class="rrow"><div class="remoji">'+r.e+'</div><div class="rinfo"><b>'+r.n+'</b><br>'+
       '<span class="rmeta">'+r.p+' g protein · ≈'+r.c+' cal</span>'+
+      (g ? ' <span class="match good">✓ great for '+planLabel+'</span>' : "")+
       (m ? ' <span class="match">✓ uses '+m+'</span>' : "")+
       '<details><summary>Ingredients &amp; how-to</summary><p style="margin:6px 0"><b>Needs:</b> '+r.ing.join(", ")+'</p><p>'+r.how+'</p></details></div>'+
       '<button class="btn" onclick="logRecipe('+i+')">Log</button></div>').join("");
   } else {
     grid.className = "rgrid";
-    grid.innerHTML = pageItems.map(({r,i,m})=>
+    grid.innerHTML = pageItems.map(({r,i,m,g})=>
       '<div class="rcard"><div class="rimg">'+r.e+'</div><div class="rbody"><b>'+r.n+'</b>'+
       '<span class="rmeta">'+r.p+' g protein · ≈'+r.c+' cal</span>'+
+      (g ? '<span class="match good">✓ great for '+planLabel+'</span>' : "")+
       (m ? '<span class="match">✓ uses '+m+' of your ingredients</span>' : "")+
       '<details><summary>Ingredients &amp; how-to</summary><p style="margin:6px 0"><b>Needs:</b> '+r.ing.join(", ")+'</p><p>'+r.how+'</p></details>'+
       '<button class="btn" onclick="logRecipe('+i+')">Log this meal</button></div></div>').join("");
