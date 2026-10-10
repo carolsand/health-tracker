@@ -15,6 +15,8 @@ const DEFAULT_STATE = {
   customWorkouts: [],
   plans: [],
   extraWeeks: 0,
+  waist: [],
+  daily: {},
   doctor: { answers: {}, custom: [], apptDate: "" }
 };
 

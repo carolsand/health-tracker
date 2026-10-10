@@ -77,6 +77,12 @@ details.week[open] summary{border-bottom:1px solid var(--line)}
 .checkitem{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px dashed var(--line)}
 .checkitem input[type=checkbox]{width:22px;height:22px;accent-color:var(--accent);flex:none;cursor:pointer}
 .checkitem.done span.t{text-decoration:line-through;color:var(--muted)}
+.pillrow{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+.pill{padding:6px 14px;border-radius:20px;background:var(--line);color:var(--muted);font-weight:700;font-size:.88rem}
+.pill.on{background:var(--good);color:#fff}
+.chip.sel{background:var(--plum);color:#fff}
+ul.pillars{margin:8px 0 8px 22px;font-size:.92rem}
+ul.pillars li{margin-bottom:7px}
 .exlist{font-size:.88rem;color:var(--muted);margin:4px 0 10px 8px}
 .exlist li{margin-left:16px;margin-bottom:2px}
 canvas{width:100%;max-width:100%;background:#fff;border:1px solid var(--line);border-radius:10px}
@@ -252,6 +258,18 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
     </div>
   </div>
   <div id="plansGrid" class="rgrid"></div>
+  <div id="checkInCard"></div>
+  <div class="card">
+    <h2>Why these four pillars?</h2>
+    <p style="font-size:.92rem">Visceral fat — the deep belly fat around your organs — responds <i>faster</i> to lifestyle change than the fat you can pinch, and is often the first fat your body draws from when you're consistent. The levers, roughly in order of impact:</p>
+    <ul class="pillars">
+      <li><b>🥗 Diet</b> — a ~500 cal/day deficit ≈ 1 lb/week, and visceral stores often go first. Cut sugary drinks and juice (fructose converts straight to liver fat), limit ultra-processed food and alcohol, and build meals from lean protein, vegetables, legumes, and healthy fats.</li>
+      <li><b>🏋️ Exercise</b> — consistency beats intensity: steady cardio matches HIIT for visceral fat loss. Regular strength sessions plus steady walk/bike cardio, sustained 12–16 weeks, are the evidence-based dose.</li>
+      <li><b>😴 Sleep</b> — 7–9 hours. Even two short nights lowers leptin (fullness) and raises ghrelin (hunger), spiking carb cravings.</li>
+      <li><b>🧘 Stress</b> — chronic cortisol promotes abdominal fat storage and drives reward eating and poor sleep. A daily 10-minute break (walk, breathing, stretching) plus moderate exercise are the most reliable regulators.</li>
+    </ul>
+    <p style="font-size:.88rem;color:var(--muted)">Expect clothes to fit differently within a few weeks of consistency; measurable waist change typically shows by ~12 weeks. Track your waist with a tape measure in the Progress tab — it beats any smart scale for visceral fat.</p>
+  </div>
 </section>
 
 <!-- ============ EXERCISE ============ -->
@@ -464,6 +482,23 @@ footer{max-width:960px;margin:0 auto;padding:16px;font-size:.8rem;color:var(--mu
     <div id="wtList"></div>
   </div>
   <div class="card">
+    <h2>Waist Measurement — Your Visceral-Fat Tracker 📏</h2>
+    <p style="font-size:.9rem;color:var(--muted)">Tape measure level with your navel, relaxed, after a normal exhale. Measure weekly — it's the most reliable home gauge of visceral fat. For women, above 35 inches signals elevated cardiometabolic risk (40 inches for men). (Smart-scale visceral readings are trend-only — the tape wins.)</p>
+    <div class="flexrow">
+      <div><label>Date</label><input type="date" id="waistDate"></div>
+      <div><label>Waist (inches)</label><input type="number" id="waistVal" min="20" max="70" step="0.25"></div>
+      <div><button class="btn" onclick="addWaist()">Log waist</button></div>
+    </div>
+    <div id="waistStats"></div>
+    <canvas id="chartWaist" height="220" data-base-height="220" data-mobile-height="150"></canvas>
+    <div id="waistList"></div>
+  </div>
+  <div class="card">
+    <h2>Sleep — Last 14 Days 😴</h2>
+    <p style="font-size:.85rem;color:var(--muted)">Logged each morning in the Daily Check-In on Home. Goal line: 7 hours (aim for 7–9).</p>
+    <canvas id="chartSleep" height="200" data-base-height="200" data-mobile-height="140"></canvas>
+  </div>
+  <div class="card">
     <h2>Daily Protein — Last 14 Days</h2>
     <canvas id="chartProtein" height="200" data-base-height="200" data-mobile-height="140"</canvas>
   </div>
@@ -549,6 +584,8 @@ const DEFAULT_STATE = {
   customWorkouts: [], // {id, date, name, exercises:[{name,sets,reps,weight,notes}]}
   plans: [],          // {id, name, type, color:{bg,text}, createdAt, startDate, checks:{}, extraWeeks, config:{}}
   extraWeeks: 0,      // legacy global counter -- kept only so migrateLegacyPlan() can read pre-plans accounts
+  waist: [],          // {date, in}
+  daily: {},          // "2026-10-10": {sleep, stress, habits:{}} -- four-pillar Daily Check-In
   doctor: { answers: {}, custom: [], apptDate: "" }
 };
 let S = loadState();
@@ -1903,8 +1940,56 @@ function renderDashboard(){
   document.getElementById("plansGrid").innerHTML = S.plans.length ?
     S.plans.map(renderPlanCard).join("") :
     '<p style="color:var(--muted);font-size:.95rem;grid-column:1/-1">No plans yet — use "+ New plan" above to create your first Activity + Nutrition plan.</p>';
+  renderCheckIn();
 }
 function stat(big,lbl){ return '<div class="stat"><div class="big">'+big+'</div><div class="lbl">'+lbl+'</div></div>'; }
+
+/* ---------- Daily check-in (four pillars) ---------- */
+function dayRec(){
+  const t = todayStr();
+  if (!S.daily[t]) S.daily[t] = { sleep:null, stress:null, habits:{} };
+  if (!S.daily[t].habits) S.daily[t].habits = {};
+  return S.daily[t];
+}
+function setSleep(v){ dayRec().sleep = (v===""? null : parseFloat(v)); save(); renderCheckIn(); }
+function setStress(v){ dayRec().stress = v; save(); renderCheckIn(); }
+function toggleHabit(k){ const d = dayRec(); d.habits[k] = !d.habits[k]; save(); renderCheckIn(); }
+function pillarsToday(){
+  const t = todayStr();
+  const d = S.daily[t] || { habits:{} };
+  const h = d.habits || {};
+  return {
+    diet:     !!(h.sugar && h.whole),
+    exercise: !!h.move || S.activities.some(a=>a.date===t),
+    sleep:    (d.sleep != null && d.sleep >= 7),
+    stress:   !!h.mind || (d.stress != null && d.stress <= 2)
+  };
+}
+function renderCheckIn(){
+  const d = S.daily[todayStr()] || { sleep:null, stress:null, habits:{} };
+  const h = d.habits || {};
+  const P = pillarsToday();
+  const score = ["diet","exercise","sleep","stress"].filter(k=>P[k]).length;
+  const pill = (on,label)=>'<span class="pill'+(on?" on":"")+'">'+(on?"✓ ":"")+label+'</span>';
+  const hab = (k,label)=>'<div class="checkitem'+(h[k]?" done":"")+'"><input type="checkbox" '+(h[k]?"checked":"")+' onchange="toggleHabit(\''+k+'\')"><span class="t">'+label+'</span></div>';
+  const faces = ["😌","🙂","😐","😣","😫"];
+  let stressBtns = "";
+  for (let i=1;i<=5;i++) stressBtns += '<button type="button" class="chip'+(d.stress===i?" sel":"")+'" onclick="setStress('+i+')">'+faces[i-1]+" "+i+'</button>';
+  const card = document.getElementById("checkInCard");
+  // Blur first: replacing a focused sleep input fires its onchange mid-removal, which re-renders
+  // this card re-entrantly and makes Chrome throw "node to be removed is no longer a child".
+  if (card.contains(document.activeElement)) document.activeElement.blur();
+  card.innerHTML ='<div class="card"><h2>Daily Check-In — Four Pillars <span class="badge">'+score+'/4 today</span></h2>'+
+    '<div class="pillrow">'+pill(P.diet,"🥗 Diet")+pill(P.exercise,"🏋️ Exercise")+pill(P.sleep,"😴 Sleep")+pill(P.stress,"🧘 Stress")+'</div>'+
+    '<div class="flexrow"><div><label>Sleep last night (hours)</label><input type="number" step="0.5" min="0" max="14" value="'+(d.sleep!=null?d.sleep:"")+'" onchange="setSleep(this.value)"></div>'+
+    '<div style="flex:2"><label>Stress today (1 calm – 5 maxed out)</label><div>'+stressBtns+'</div></div></div>'+
+    hab("sugar","No sugary drinks, juice, or added-sugar snacks today")+
+    hab("whole","Meals were mostly whole foods — lean protein, vegetables, legumes, healthy fats")+
+    hab("alcohol","Alcohol-free today (or kept it to one)")+
+    hab("move","Moved today — strength session, walk, or bike")+
+    hab("mind","Took a 10-minute stress break — walk, breathing, stretching, or mindfulness")+
+    '<p style="font-size:.82rem;color:var(--muted);margin-top:8px">Sleep pillar lights at 7+ hours · Stress lights with your break (or a calm 1–2 day) · Diet needs both food boxes · Exercise lights automatically when you log activity, or check the box.</p></div>';
+}
 function todayPlanText(plan, wk){
   const spec = weekSpec(plan, wk);
   const dow = new Date().getDay(); // 0 Sun
@@ -2586,6 +2671,32 @@ function addWeight(){
   renderProgress(); renderDashboard();
 }
 function delWeight(date){ S.weights = S.weights.filter(w=>w.date!==date); save(); renderProgress(); renderDashboard(); }
+function addWaist(){
+  const d = document.getElementById("waistDate").value || todayStr();
+  const v = parseFloat(document.getElementById("waistVal").value);
+  if (!v){ showToast("Please enter a measurement.", "error"); return; }
+  S.waist = S.waist.filter(w=>w.date!==d);
+  S.waist.push({date:d, in:v});
+  S.waist.sort((a,b)=>a.date<b.date?-1:1);
+  save();
+  document.getElementById("waistVal").value = "";
+  renderProgress();
+}
+function delWaist(date){ S.waist = S.waist.filter(w=>w.date!==date); save(); renderProgress(); }
+function renderWaist(){
+  if (!document.getElementById("waistDate").value) document.getElementById("waistDate").value = todayStr();
+  const wa = S.waist;
+  const waStats = document.getElementById("waistStats");
+  if (wa.length){
+    const first = wa[0].in, last = wa[wa.length-1].in, ch = last-first;
+    waStats.innerHTML = '<div class="statrow">'+stat(first.toFixed(1)+"″","Starting")+stat(last.toFixed(1)+"″","Current")+stat((ch>0?"+":"")+ch.toFixed(1)+"″","Change")+
+      stat(last<35?"✓":"▲", last<35?"Below 35″ threshold":"Above 35″ threshold")+'</div>';
+  } else waStats.innerHTML = "";
+  document.getElementById("waistList").innerHTML = wa.length ?
+    '<table><thead><tr><th>Date</th><th>Waist</th><th></th></tr></thead><tbody>'+
+    wa.slice(-8).reverse().map(w=>'<tr><td>'+fmtDate(w.date)+'</td><td>'+w.in.toFixed(2)+'″</td><td><button class="del" onclick="delWaist(\''+w.date+'\')">✕</button></td></tr>').join("")+
+    '</tbody></table>' : "";
+}
 function saveGoalWeight(){
   const v = parseFloat(document.getElementById("goalWeightInput").value);
   const plan = ensureActivePlan();
@@ -2748,8 +2859,11 @@ function renderProgress(){
     '<table><thead><tr><th>Date</th><th>Weight</th><th></th></tr></thead><tbody>'+
     ws.slice(-10).reverse().map(w=>'<tr><td>'+fmtDate(w.date)+'</td><td>'+w.lbs.toFixed(1)+' lb</td><td><button class="del" onclick="delWeight(\''+w.date+'\')">✕</button></td></tr>').join("")+
     '</tbody></table>' : "";
+  renderWaist();
   if (document.getElementById("tab-progress").classList.contains("active")){
     drawWeightChart();
+    drawWaistChart();
+    drawSleepChart();
     drawProteinChart();
     drawCalsChart();
     drawWorkoutsChart();
@@ -2784,6 +2898,36 @@ function last14(){
   for(let i=13;i>=0;i--){ const d=new Date(now); d.setDate(d.getDate()-i);
     arr.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")); }
   return arr;
+}
+function drawWaistChart(){
+  const {ctx,W,H} = setupCanvas("chartWaist");
+  const ws = S.waist;
+  if (ws.length<2){ emptyMsg(ctx,W,H,"Log at least two waist measurements to see your trend"); return; }
+  const pad={l:46,r:12,t:14,b:26};
+  const vals = ws.map(w=>w.in).concat([35]);
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  const span=Math.max(2,hi-lo); lo-=span*0.15; hi+=span*0.15;
+  const x=i=>pad.l+(W-pad.l-pad.r)*(ws.length===1?0.5:i/(ws.length-1));
+  const y=v=>pad.t+(H-pad.t-pad.b)*(1-(v-lo)/(hi-lo));
+  ctx.strokeStyle="#e6e2da"; ctx.fillStyle="#888"; ctx.font="11px Segoe UI, sans-serif"; ctx.textAlign="right";
+  for(let g=0;g<=4;g++){ const v=lo+(hi-lo)*g/4, yy=y(v);
+    ctx.beginPath(); ctx.moveTo(pad.l,yy); ctx.lineTo(W-pad.r,yy); ctx.stroke();
+    ctx.fillText(v.toFixed(1), pad.l-6, yy+4); }
+  ctx.strokeStyle="#c9a227"; ctx.setLineDash([6,4]); ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(pad.l,y(35)); ctx.lineTo(W-pad.r,y(35)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle="#8a6d00"; ctx.textAlign="left"; ctx.fillText("35″ risk threshold", pad.l+4, y(35)-5);
+  ctx.strokeStyle="#7b4b94"; ctx.lineWidth=2.5; ctx.beginPath();
+  ws.forEach((w,i)=>{ i?ctx.lineTo(x(i),y(w.in)):ctx.moveTo(x(i),y(w.in)); }); ctx.stroke();
+  ctx.fillStyle="#7b4b94";
+  ws.forEach((w,i)=>{ ctx.beginPath(); ctx.arc(x(i),y(w.in),4,0,7); ctx.fill(); });
+  ctx.fillStyle="#888"; ctx.textAlign="center";
+  ctx.fillText(fmtDate(ws[0].date), x(0)+14, H-8);
+  ctx.fillText(fmtDate(ws[ws.length-1].date), x(ws.length-1)-14, H-8);
+}
+function drawSleepChart(){
+  const days = last14();
+  const vals = days.map(d=>{ const r=S.daily[d]; return (r && r.sleep!=null) ? r.sleep : 0; });
+  drawBarsChart("chartSleep", days, [{name:"Hours slept", values:vals, color:"#7b4b94"}], 7, "Log sleep each morning in the Daily Check-In on Home");
 }
 function drawWeightChart(){
   const {ctx,W,H} = setupCanvas("chartWeight");
